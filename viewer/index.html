@@ -1,0 +1,115 @@
+<!doctype html>
+<!-- saved from url=(0021)http://www.google.com -->
+ 
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SmartVideo Viewer</title>
+  <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+  <link rel="stylesheet" href="http://layout.jquery-dev.net/lib/css/layout-default-latest.css" />
+  <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+  <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+  <script src="http://layout.jquery-dev.net/lib/js/jquery.layout-latest.js"></script>
+  
+  <script src="util.js"></script>
+  <script src="viewer.js"></script>
+  <script>
+	// Configuration
+	window.viewerCfgDir = "../cfg";
+	window.viewerCfgFile  = "config.json";
+	window.viewerFPSDelta = 5;		// Amount of FPS to add/subtract when pressing the fast forward/backward buttons
+	
+	var minLayoutWidth = 360;		// viewer width will not be less than this
+	var nPadding = 12;				// leave some padding when centering components
+	var nNonFrameHeight = 180;		// total height of UI elements, excluding video frame
+	var nFrameInfoWidth = 140;		// width of the frame info, next to the seek bar			
+	
+	
+	// place viewer at center, on resize
+	var onResize = function()
+	{
+		window.viewers.forEach(updateViewerSize);
+		$('.viewer').first().centerWidth();			// center viewer on page
+		
+		// update width of progress bar and it's text field
+		$("#bar").width($(".viewer").width() - nFrameInfoWidth);
+		$("#frameInfoCont").width(nFrameInfoWidth - 4 * nPadding);	// padding of both sides of the parent and inner frames
+		
+		// !!! this is a hack to work around retarded issues with buttons not layouting correctly
+		var buttons = $("button");
+		buttons.each(function(i) { $(this).text($(this).text()) });
+	};
+	
+	$( window ).resize(onResize);
+	
+	$( document ).ready( function() {
+		// create viewer UI elements
+		loadViewers(window.viewerCfgDir);
+	
+		// UI initialization
+		window.viewerLayout = $('.layout-cont').layout({
+		});
+		
+		// this does not work for some reason:
+		window.viewerLayout.disableResizable('north');
+		window.viewerLayout.disableResizable('south');
+	
+		// attach event handler to clipLoaded event
+		window.viewers.forEach(function(viewer) {
+			viewer.viewerElem.on("clipLoaded", function(entry) {
+				$(window).trigger("resize");
+			});
+		});
+		
+		$(window).trigger("resize");
+	});
+	
+	function updateViewerSize(viewer)
+	{
+		// update viewer size to be a tight fit
+		viewer.viewerElem.width(2 * nPadding + Math.max(minLayoutWidth, viewer.getFrameWidth()));
+		viewer.viewerElem.height(2 * nPadding + nNonFrameHeight + viewer.getFrameHeight());
+	}
+  </script>
+</head>
+<body style="width:100%;height=100%;">
+	<div class="viewer layout-cont" id="1" style="height:800px" data-viewercfg="config.json">
+		<div class="ui-layout-north" style="height : 60px; resizable : false">
+			<div id="clipCont" style="float:left; height=100%">
+				<label id="clipInfo-title" class="ui-widget">Clip: </label>
+				<select id="clipList" class="ui-widget ui-widget-content ui-corner-left"></select>
+			</div>
+		</div>
+		
+		<div id="frame" class="ui-layout-center" style="margin:auto;padding:0;align:center;vertical-align: middle;width=100%">
+		</div>
+		
+		<div class="ui-layout-south">
+			<!-- Progress bar container -->
+			<div id="buttonCont" style="height:30px">
+				<button id="speed-down" style="width:15%;height:80%;float:left"><<</button>
+				
+				<button id="play" style="width:25%;height:80%;float:left">Play</button>
+				<button id="stop" style="width:25%;height:80%;float:left">Stop</button>
+			
+				<button id="speed-up" style="width:15%;height:80%;float:left">>></button>
+			</div>
+			
+			<!-- Seek bar container -->
+			<div id="barCont" style="height:25px">
+				<div id="bar" style="height:20px; float:left"></div>
+				<div id="frameInfoCont" style="float:right;text-align: right; padding-right:3px" class="ui-widget-content">
+					<label id="frameInfo"></label>
+				</div>
+			</div>
+			
+			<hr>
+			
+			<!-- Status label -->
+			<div id="statusCont" style="width:100%; height:18px; padding-left:3px; font-size:12px; background-color:#EEEEEE" class="ui-widget;">
+				<label id="status"></label><br>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

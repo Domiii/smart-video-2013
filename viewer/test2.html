@@ -1,0 +1,62 @@
+
+<!doctype html>
+ 
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>js tests</title>
+  <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+  <link rel="stylesheet" href="http://layout.jquery-dev.net/lib/css/layout-default-latest.css" />
+  <script type="text/javascript" src="util.js"></script>
+  <script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+  <script type="text/javascript" src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+  
+  
+	<script type="text/javascript">
+	  function getBase64FromImageUrl(URL) {
+		var img = new Image();
+		img.src = URL;
+		img.onload = function () {
+			var canvas = document.createElement("canvas");
+			canvas.width =this.width;
+			canvas.height =this.height;
+
+			var ctx = canvas.getContext("2d");
+			ctx.drawImage(this, 0, 0);
+
+
+			var dataURL = canvas.toDataURL("image/png");
+
+			alert(  dataURL.replace(/^data:image\/(png|jpg);base64,/, ""));
+		}
+		img.onerror = function () {
+			alert('fail');
+		}
+	}
+	</script>
+	
+	<script>
+	function readTextFile(file)
+	{
+		var x = $.get(file, function(data) {
+		  alert( "success: " + data );
+		})
+		  .done(function() {
+			alert( "second success" );
+		  })
+		  .fail(function() {
+			alert( "error" );
+		  })
+		  .always(function() {
+			alert( "finished" );
+		  });
+	}
+	  
+	window.onload = function() {
+		readTextFile("util.js");
+	}
+	</script>
+</head>
+<body>
+</body>
+</html>

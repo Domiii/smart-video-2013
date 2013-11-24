@@ -1,0 +1,10 @@
+# Binary Directories
+bin
+Debug
+Release
+x64
+
+# Visual Studio files
+*.sdf
+*.suo
+*.user
