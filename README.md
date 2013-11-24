@@ -1,9 +1,9 @@
-On Windows:
-			- Setings: "Replace tabs by spaces" 
+- On Windows:
 	- Get VS 2012 Express from http://www.microsoft.com/en-us/download/confirmation.aspx?id=34673 (OpenCV does not support VS 2013 yet)
+		- Settings: "Replace tabs by spaces" 
 		- Create your own Makefile for other toolchains
 	
-SmartVideo app:
+- SmartVideo app:
 	- Setup OpenCV
 		- Close Visual Studio first!
 		- Follow these four steps (http://docs.opencv.org/doc/tutorials/introduction/windows_install/windows_install.html):
@@ -15,7 +15,7 @@ SmartVideo app:
 	- Run SmartVideo/smart-video-2013.sln (given you have VS 2012)
 	- Should work
 	
-Viewer:
+- Viewer:
 	- Run viewer by just executing: viewer/index.html
 	- Chrome: 
 		- Allow Chrome to read local files from files (in order to run the viewer without a web server)
@@ -28,7 +28,7 @@ Viewer:
 		- Ctrl + Shift + J in Chrome
 		- F12 in IE
 
-Data:
+- Data:
 	- The data directory is defined in "cfg/config.json"
 	- Data set configurations are defined in "cfg/clips.json" (currently only supports image sequences, gotta fix that)
 	- Setup:
