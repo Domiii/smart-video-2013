@@ -3,15 +3,17 @@
 		- Settings: "Replace tabs by spaces" 
 		- Create your own Makefile for other toolchains
 	
-- SmartVideo app:
-	- Setup OpenCV (On Windows: Version 2.47, 64 bit)
+- SmartVideo app (Windows):
+	- Setup OpenCV 2.47, 64 bit
 		- On Windows: Close Visual Studio first!
-		- Follow these four steps (http://docs.opencv.org/doc/tutorials/introduction/windows_install/windows_install.html):
+		- Follow these four steps:
 			1. Download version 2.47 from http://opencv.org/downloads.html
 			2. Make sure you have admin rights. Unpack the self-extracting archive.
-			3. To finalize the installation go to the Set the OpenCV enviroment variable and add it to the systems path section.
-				-> setx -m OPENCV_DIR <open-cv install path>\Build\x64\vc11
-	- Run SmartVideo/smart-video-2013.sln (make sure, you have VS 2012)
+			3. Set the OPENCV_DIR system variable:
+				- setx /M OPENCV_DIR <open-cv install path>\build\x64\vc11\
+			4. Add the OpenCV library folder to your system PATH:
+				- setx /M PATH "%PATH%;%OPENCV_DIR%bin\"
+	- Run SmartVideo/smart-video-2013.sln (make sure that you have VS 2012)
 	- Should work
 	
 - Viewer:
