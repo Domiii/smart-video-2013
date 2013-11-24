@@ -10,7 +10,7 @@
 			1. Download version 2.47 from http://opencv.org/downloads.html
 			2. Make sure you have admin rights. Unpack the self-extracting archive.
 			3. Set the OPENCV_DIR system variable:
-				- setx /M OPENCV_DIR <open-cv install path>\build\x64\vc11\
+				- setx /M OPENCV_DIR "open-cv-install-path\build\x64\vc11\"
 			4. Add the OpenCV library folder to your system PATH:
 				- setx /M PATH "%PATH%;%OPENCV_DIR%bin\"
 	- Run SmartVideo/smart-video-2013.sln (make sure that you have VS 2012)
@@ -36,12 +36,12 @@
 		- Download data sets from:
 			- http://wordpress-jodoin.dmi.usherb.ca/static/dataset/dataset.zip
 			- http://burnbit.com/torrent/235660/SABS_Basic_rar
-		- Extract to some folder <data-root>
+		- Extract to some folder data-root
 			- I placed it in: ../data/
 			- If you have different folder, update "cfg/config.json" correspondingly
 		- If you want to add more data sets:
 			1. Also extract them into that folder
-			2. Run "ls > cfg/<datasetname>.txt" (to get all image file names)
+			2. Run "ls > cfg/dataset-name.txt" (a list of all image file names that comprise the video)
 			3. Add entry to cfg/clips.json
 - TODO
 	- a lot more...
