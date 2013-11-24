@@ -4,15 +4,14 @@
 		- Create your own Makefile for other toolchains
 	
 - SmartVideo app:
-	- Setup OpenCV
-		- Close Visual Studio first!
+	- Setup OpenCV (On Windows: Version 2.47, 64 bit)
+		- On Windows: Close Visual Studio first!
 		- Follow these four steps (http://docs.opencv.org/doc/tutorials/introduction/windows_install/windows_install.html):
-			1. Launch a web browser of choice and go to our page on Sourceforge (http://opencv.org/downloads.html)
-			2. Choose a build you want to use and download it.
-			3. Make sure you have admin rights. Unpack the self-extracting archive.
-			4. To finalize the installation go to the Set the OpenCV enviroment variable and add it to the systems path section.
-				-> http://docs.opencv.org/doc/tutorials/introduction/windows_install/windows_install.html#windowssetpathandenviromentvariable
-	- Run SmartVideo/smart-video-2013.sln (given you have VS 2012)
+			1. Download version 2.47 from http://opencv.org/downloads.html
+			2. Make sure you have admin rights. Unpack the self-extracting archive.
+			3. To finalize the installation go to the Set the OpenCV enviroment variable and add it to the systems path section.
+				-> setx -m OPENCV_DIR <open-cv install path>\Build\x64\vc11
+	- Run SmartVideo/smart-video-2013.sln (make sure, you have VS 2012)
 	- Should work
 	
 - Viewer:
@@ -42,5 +41,5 @@
 			1. Also extract them into that folder
 			2. Run "ls > cfg/<datasetname>.txt" (to get all image file names)
 			3. Add entry to cfg/clips.json
-TODO
-	- a lot...
+- TODO
+	- a lot more...
