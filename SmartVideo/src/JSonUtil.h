@@ -1,5 +1,5 @@
-#ifndef JSONUTIL_H
-#define JSONUTIL_H
+#ifndef UTIL_JSONUTIL_H
+#define UTIL_JSONUTIL_H
 
 #include <vjson/json.h>
 #include <iostream>
@@ -73,4 +73,4 @@ inline void JSonPrint(json_value *value, int indent)
         }
 }
 
-#endif // JSONUTIL_H
+#endif // UTIL_JSONUTIL_H

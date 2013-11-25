@@ -3,11 +3,13 @@
 
 #include "util.h"
 #include "JSonUtil.h"
+#include "workers.h"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/background_segm.hpp>
 
 #include <memory>
+
 
 namespace SmartVideo
 {
@@ -73,16 +75,21 @@ namespace SmartVideo
     {
         const SmartVideoConfig Config;
 
-        const ClipEntry * clipEntry;                // current clip
-        int iFrameNumber;                           // index of current frame in video stream
-        cv::Mat frame;                              // current frame
-        cv::Mat foregroundMask;                     // binary image, with only the foreground set to 1
-        cv::Ptr<cv::BackgroundSubtractor> pMOG;     // MOG Background subtractor
-        std::vector<float> frameWeights;            // weight of every frame
+        const ClipEntry * clipEntry;                        // current clip
+        int iFrameNumber;                                   // index of current frame in video stream
+        cv::Mat frame;                                      // current frame
+        cv::Mat foregroundMask;                             // binary image, with only the foreground set to 1
+        std::unique_ptr<cv::BackgroundSubtractor> pMOG;     // MOG Background subtractor
+        std::vector<float> frameWeights;                    // weight of every frame
+
+        /// Worker to perform all I/O operations
+        Util::Worker ioWorker;
+
 
         SmartVideoProcessor(SmartVideoConfig cfg) :
             Config(cfg)
         {
+            //ioWorker.SetTaskQueue(std::bind(&SmartVideoProcessor::GetNextIOJob, this));
         }
 
         virtual ~SmartVideoProcessor()
@@ -116,6 +123,7 @@ namespace SmartVideo
             }
         }
 
+        Util::Job GetNextIOJob();
 
     public:
         /// Set the weight of the given frame.

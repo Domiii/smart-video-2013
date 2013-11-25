@@ -1,5 +1,3 @@
-//opencv
-
 #include "SmartVideo.h"
 
 using namespace std;
@@ -7,7 +5,7 @@ using namespace SmartVideo;
 
 
 SmartVideoConfig Config;
-cv::Ptr<SmartVideoProcessor> Processor;
+std::unique_ptr<SmartVideoProcessor> Processor;
 
 int main(int argc, char* argv[])
 {
@@ -25,7 +23,7 @@ int main(int argc, char* argv[])
 
     
     // create new processor
-    Processor = new SmartVideoProcessor(Config);
+    Processor = std::unique_ptr<SmartVideoProcessor>(new SmartVideoProcessor(Config));
 
     for (auto clip : Config.ClipEntries)
     {

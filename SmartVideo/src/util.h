@@ -1,5 +1,5 @@
-#ifndef SMARTVIDEO_UTIL_H
-#define SMARTVIDEO_UTIL_H
+#ifndef UTIL_UTIL_H
+#define UTIL_UTIL_H
 
 //C
 #include <stdio.h>
@@ -89,4 +89,4 @@ namespace SmartVideo
     }
 }
 
-#endif // SMARTVIDEO_UTIL_H
+#endif // UTIL_UTIL_H

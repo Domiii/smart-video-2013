@@ -4,6 +4,7 @@
 
 using namespace cv;
 using namespace std;
+using namespace Util;
 
 
 namespace SmartVideo
@@ -48,7 +49,7 @@ namespace SmartVideo
     void SmartVideoProcessor::InitProcessing(const ClipEntry* clipEntry)
     {
         this->clipEntry = clipEntry;
-        pMOG = new BackgroundSubtractorMOG(); //MOG approach
+        pMOG = unique_ptr<BackgroundSubtractorMOG>(new BackgroundSubtractorMOG()); //MOG approach
         iFrameNumber = 0;
         
         // allocate frame weights
@@ -193,6 +194,8 @@ namespace SmartVideo
         float lastProgress = static_cast<float>(iFrameNumber-1) / nTotalFrames;
         int progressLen = static_cast<int>(Config.ProgressBarLen * progress + .5f);
         int lastProgressLen = static_cast<int>(Config.ProgressBarLen * lastProgress + .5f);
+
+        // progress bar moved, or we processed the last frame
         if (progressLen != lastProgressLen || iFrameNumber == nTotalFrames)
         {
             std::string progressString("|");
@@ -228,5 +231,10 @@ namespace SmartVideo
 
             waitKey(10);        // TODO: Add a way to better control playback FPS
         }
+    }
+
+    Job SmartVideoProcessor::GetNextIOJob()
+    {
+        return nullptr;
     }
 }
