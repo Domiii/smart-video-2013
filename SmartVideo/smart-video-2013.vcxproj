@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="dep\vjson\json.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\SmartVideo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dep\vjson\json.h" />

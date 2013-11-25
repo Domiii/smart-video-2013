@@ -10,19 +10,19 @@
   <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
   <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
   <script src="http://layout.jquery-dev.net/lib/js/jquery.layout-latest.js"></script>
+  <script src="http://www.flotcharts.org/flot/jquery.flot.js"></script>
   
   <script src="util.js"></script>
   <script src="viewer.js"></script>
   <script>
 	// Configuration
-	window.viewerCfgDir = "../cfg";
-	window.viewerCfgFile  = "config.json";
+	window.viewerCfgDir = "../";	// the folder containing the config file(s)
 	window.viewerFPSDelta = 5;		// Amount of FPS to add/subtract when pressing the fast forward/backward buttons
 	
 	var minLayoutWidth = 360;		// viewer width will not be less than this
 	var nPadding = 12;				// leave some padding when centering components
-	var nNonFrameHeight = 180;		// total height of UI elements, excluding video frame
-	var nFrameInfoWidth = 140;		// width of the frame info, next to the seek bar			
+	var nNonFrameHeight = 300;		// total height of all UI elements without the video frame
+	var nFrameInfoWidth = 200;		// width of the frame info, next to the seek bar			
 	
 	
 	// place viewer at center, on resize
@@ -32,7 +32,6 @@
 		$('.viewer').first().centerWidth();			// center viewer on page
 		
 		// update width of progress bar and it's text field
-		$("#bar").width($(".viewer").width() - nFrameInfoWidth);
 		$("#frameInfoCont").width(nFrameInfoWidth - 4 * nPadding);	// padding of both sides of the parent and inner frames
 		
 		// !!! this is a hack to work around retarded issues with buttons not layouting correctly
@@ -56,13 +55,43 @@
 	
 		// attach event handler to clipLoaded event
 		window.viewers.forEach(function(viewer) {
-			viewer.viewerElem.on("clipLoaded", function(entry) {
-				$(window).trigger("resize");
+			viewer.viewerElem.on("clipLoaded", function(evt, entry) {
+				updateClip(entry);
 			});
 		});
 		
 		$(window).trigger("resize");
 	});
+	
+	/// Called when clip is changed
+	function updateClip(entry)
+	{
+		// plot the frame weights
+		var idx = 0;
+		(function(idx) {
+			var weights = entry.weights.map(function(weight) { return [idx++, weight]; });
+			var weightPlot = $.plot("#plotWeights", [weights], {
+				xaxis : {
+					tickFormatter : function(val, axis) { return ""; }
+				},
+				yaxis : {
+					tickFormatter : function(val, axis) { return ""; }
+				},
+				grid: {
+					show : false
+				},
+				lines: {
+					lineWidth : .8,
+					fill : false
+				},
+				shadowSize : 0
+			});
+			$("#plotWeights").find("canvas").css("width", "100%");
+		})(idx);
+		
+		// re-do the layout
+		$(window).trigger("resize");
+	}
 	
 	function updateViewerSize(viewer)
 	{
@@ -73,6 +102,7 @@
   </script>
 </head>
 <body style="width:100%;height=100%;">
+	<!-- Viewer -->
 	<div class="viewer layout-cont" id="1" style="height:800px" data-viewercfg="config.json">
 		<div class="ui-layout-north" style="height : 60px; resizable : false">
 			<div id="clipCont" style="float:left; height=100%">
@@ -85,22 +115,26 @@
 		</div>
 		
 		<div class="ui-layout-south">
-			<!-- Progress bar container -->
-			<div id="buttonCont" style="height:30px">
-				<button id="speed-down" style="width:15%;height:80%;float:left"><<</button>
+			<!-- Control buttons & frame info container -->
+			<div id="controlCont" style="height:30px">
+				<button id="speed-down" style="width:30px;height:80%;float:left"><<</button>
+				<button id="play" style="width:60px;height:80%;float:left">Play</button>
+				<button id="stop" style="width:60px;height:80%;float:left">Stop</button>
+				<button id="speed-up" style="width:30px;height:80%;float:left">>></button>
 				
-				<button id="play" style="width:25%;height:80%;float:left">Play</button>
-				<button id="stop" style="width:25%;height:80%;float:left">Stop</button>
-			
-				<button id="speed-up" style="width:15%;height:80%;float:left">>></button>
-			</div>
-			
-			<!-- Seek bar container -->
-			<div id="barCont" style="height:25px">
-				<div id="bar" style="height:20px; float:left"></div>
 				<div id="frameInfoCont" style="float:right;text-align: right; padding-right:3px" class="ui-widget-content">
 					<label id="frameInfo"></label>
 				</div>
+			</div>
+			
+			<!-- Seek bar container -->
+			<div id="barCont" style="width:100%; height:20px">
+				<div id="bar" style="width:100%; height:20px; float:left"></div>
+			</div>
+			
+			<!-- Plot container -->
+			<div id="plotCont" style="width:100%; height:100px">
+				<div id="plotWeights" style="width:100%; height:80px; float:left"></div>
 			</div>
 			
 			<hr>
@@ -110,6 +144,10 @@
 				<label id="status"></label><br>
 			</div>
 		</div>
+	</div>
+	
+	<div>
+		
 	</div>
 </body>
 </html>

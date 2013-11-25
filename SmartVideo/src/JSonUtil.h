@@ -7,6 +7,8 @@
 
 #define INDENT(n) for (int i = 0; i < n; ++i) std::cout << "    "
 
+static const json_value EmptyJSonNode;
+
 
 void JSonPrint(json_value *value, int indent = 0);
 
@@ -25,6 +27,16 @@ inline json_value * JSonReadFile(std::string filepath)
 
     printf("ERROR in JSon file %s:%d - %s\n%s\n\n", filepath.c_str(), errorLine, errorDesc, errorPos);
     return nullptr;
+}
+
+
+inline const json_value* JSonGetProperty(json_value* entry, std::string propName)
+{
+    if (entry->children.count(propName) == 0)
+    {
+        return &EmptyJSonNode;
+    }
+    return entry->children.find(propName)->second;
 }
 
 inline void JSonPrint(json_value *value, int indent)

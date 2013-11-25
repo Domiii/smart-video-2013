@@ -6,7 +6,7 @@
 #define JSON_H
 
 
-#include <map>
+#include <unordered_map>
 #include <string>
 
 enum json_type
@@ -27,13 +27,13 @@ struct json_value
         json_value *next_sibling;
         json_value *first_child;
         json_value *last_child;
-        std::map<std::string, json_value*> children;
+        std::unordered_map<std::string, json_value*> children;
 
         std::string name;
 
         union
         {
-                char *string_value;
+                char* string_value;
                 int int_value;
                 float float_value;
         };
@@ -46,8 +46,15 @@ struct json_value
             parent(nullptr),
             next_sibling(nullptr),
             first_child(nullptr),
-            last_child(nullptr)
+            last_child(nullptr),
+            string_value(0)
         {
+        }
+
+        std::string GetStringValue() const
+        {
+            if (string_value == 0) return "";
+            return string_value;
         }
 };
 

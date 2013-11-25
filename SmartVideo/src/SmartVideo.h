@@ -4,72 +4,131 @@
 #include "util.h"
 #include "JSonUtil.h"
 
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/video/background_segm.hpp>
+
+#include <memory>
+
 namespace SmartVideo
 {
+    /// Represents a clip (currently: Sequence of images)
     struct ClipEntry
     {
         std::string Name;
         int StartFrame;
         std::string BaseFolder;
         std::string ClipFile;
+        std::string WeightFile;
+        std::vector<std::string> Filenames;
+
+        size_t GetFrameCount() const { return Filenames.size(); }
     };
 
+    /// Configuration for the SmartVideo processor.
     struct SmartVideoConfig
     {
+        bool DisplayResults;
+        int ProgressBarLen;
         std::string CfgFolder;
         std::string CfgFile;
 
         std::string DataFolder;
+        std::string ClipinfoDir;
         std::string ClipListFile;
         
         std::vector<ClipEntry> ClipEntries;
         
-
-        void OnEntryNotFound(std::string entryName, std::string propName)
+        /// Get the path to the file containing all clip filenames.
+        std::string GetClipListPath() const
         {
-            std::cerr << "ERROR: Invalid config. Property \"" << propName  << "\" missing in entry: " << entryName;
-            exit(-1);           // TODO: This is a bit too drastic
+            return CfgFolder + "/" + ClipinfoDir + "/" + ClipListFile;
         }
-
-        json_value* GetProperty(json_value* entry, std::string propName)
+        
+        /// Get the path to the file containing all frame weights.
+        std::string GetWeightsPath(const ClipEntry& clipEntry) const
         {
-            if (entry->children.count(propName) == 0)
-            {
-                OnEntryNotFound(entry->name, propName);
-                return nullptr;
-            }
-            return entry->children.find(propName)->second;
+            return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.WeightFile;
+        }
+        
+        /// Get the path to the file containing all frame filenames.
+        std::string GetFrameFilePath(const ClipEntry& clipEntry) const
+        {
+            return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.ClipFile;
+        }
+        
+        /// Get the folder containing the files containing the given clip's frames
+        std::string GetClipFolder(const ClipEntry& clipEntry) const
+        {
+            return CfgFolder + "/" + DataFolder + "/" + clipEntry.BaseFolder;
         }
 
         /// Read all config files
-        bool InitializeConfig()
+        bool InitializeConfig();
+    };
+
+
+
+    /// The class that does the "SmartVideo" processing.
+    struct SmartVideoProcessor
+    {
+        const SmartVideoConfig Config;
+
+        const ClipEntry * clipEntry;                // current clip
+        int iFrameNumber;                           // index of current frame in video stream
+        cv::Mat frame;                              // current frame
+        cv::Mat foregroundMask;                     // binary image, with only the foreground set to 1
+        cv::Ptr<cv::BackgroundSubtractor> pMOG;     // MOG Background subtractor
+        std::vector<float> frameWeights;            // weight of every frame
+
+        SmartVideoProcessor(SmartVideoConfig cfg) :
+            Config(cfg)
         {
-            std::string cfgPath(CfgFolder + "/" + CfgFile);
-            json_value * cfgRoot = JSonReadFile(cfgPath);
-            if (!cfgRoot) return false;
-
-            DataFolder = GetProperty(cfgRoot, "dataDir")->string_value;
-            ClipListFile = GetProperty(cfgRoot, "clipFile")->string_value;
-
-            std::string clipListPath(CfgFolder + "/" + ClipListFile);
-            json_value * clipRoot = JSonReadFile(clipListPath);
-            if (!clipRoot) return false;
-
-            ClipEntries.resize(clipRoot->children.size());
-
-            int i = 0;
-            for (auto&  x : clipRoot->children)
-            {
-                ClipEntry& entry = ClipEntries[i++];
-                json_value* entryNode = x.second;
-                entry.Name = x.second->name;
-                entry.BaseFolder = GetProperty(entryNode, "baseDir")->string_value;
-                entry.ClipFile = GetProperty(entryNode, "frameFile")->string_value;
-                entry.StartFrame = GetProperty(entryNode, "startFrame")->int_value;
-            }
-
-            return true;
         }
+
+        virtual ~SmartVideoProcessor()
+        {
+            Cleanup();
+        }
+
+    private:
+        /// Initialize this guy.
+        void InitProcessing(const ClipEntry * clipEntry);
+        
+        /// Finalize the process.
+        void FinishProcessing();
+
+        /// Processes the frame that was last read from the input stream.
+        void ProcessInputFrame();
+
+        /// Computes the weight of a uchar binary image.
+        float ComputeFrameWeight(cv::Mat frame);
+
+        /// Draw progress. TODO: Trigger event instead, and let user draw.
+        void DrawProgress();
+
+        /// Release all resources
+        void Cleanup()
+        {
+            if (Config.DisplayResults)
+            {
+                cvDestroyWindow("Frame");
+                cvDestroyWindow("Foreground");
+            }
+        }
+
+
+    public:
+        /// Set the weight of the given frame.
+        void SetWeight(int iFrame, float weight)
+        {
+            frameWeights[iFrame] = weight;
+        }
+
+        /// Process a video.
+        void ProcessVideo(const ClipEntry& clipEntry);
+
+        /// Process a stream that is represented by a sequence of images.
+        void ProcessImages(const ClipEntry& clipEntry);
     };
 }
 

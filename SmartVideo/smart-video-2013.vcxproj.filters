@@ -19,6 +19,9 @@
     <ClCompile Include="src\main.cpp">
       <Filter>SmartVideo</Filter>
     </ClCompile>
+    <ClCompile Include="src\SmartVideo.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dep\vjson\json.h">

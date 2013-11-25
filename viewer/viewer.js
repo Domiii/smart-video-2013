@@ -22,7 +22,7 @@ function loadViewers(cfgDir, cfgFiles)
 			cfgFile = cfgFiles[i];
 		}
 		else if (!isSet(cfgFile = $(elem).data("viewercfg"))) {
-			assert(false && "data-viewerCfg attribute is not set on viewer");
+			assert(false && "data-viewercfg attribute is not set on viewer");
 		}
 		
 		assert(isSet(cfgFile));
@@ -65,10 +65,6 @@ var _ViewerClassDef = (function () {
 		isViewer : function() { return true; },
 		
 		isReady : function() { return this.entry || false; },
-		
-		getConfigPath : function() { return this.cfgDir + "/" + this.cfgFile; },
-		
-		getClipListPath : function() { return this.cfgDir + "/" + this.clipListFile; },
 		
 		isPlaying : function()
 		{
@@ -115,6 +111,19 @@ var _ViewerClassDef = (function () {
 			return firstFrame[0].height;				// return height of image (not the jQuery object)
 		},
 		
+		
+		// Directory and path information
+		
+		getConfigPath : function() { return concatPath(this.cfgDir, this.cfgFile); },
+		
+		getClipListPath : function() { return concatPath(this.cfgDir, this.clipinfoDir, this.clipListFile); },
+		
+		getFrameListPath : function(entry) { return concatPath(this.cfgDir, this.clipinfoDir, entry.frameFile); },
+		
+		getFrameWeightPath : function(entry) { return concatPath(this.cfgDir, this.clipinfoDir, entry.weightFile); },
+		
+		getFrameFileDir : function(entry) { return concatPath(this.cfgDir, this.dataDir, entry.baseDir); },
+		
 		// ############################################################################################################
 		// setup
 		
@@ -129,7 +138,7 @@ var _ViewerClassDef = (function () {
 			
 			// GUI setup
 			(function(viewer) {
-				viewer.viewerElem.on("clipLoaded", function() { viewer.onClipLoaded(viewer.entry); });
+				viewer.viewerElem.on("clipLoaded", function(evt, entry) { viewer.onClipLoaded(entry); });
 				assert(viewer.viewerElem.find("#frame").size() > 0);		// can't live without this guy
 				viewer.frameCont = viewer.viewerElem.find("#frame").first();
 				
@@ -201,6 +210,7 @@ var _ViewerClassDef = (function () {
 						assert(isSet(cfg.dataDir) && isSet(cfg.clipFile));
 						viewer.dataDir = cfg.dataDir;
 						viewer.clipListFile = cfg.clipFile;
+						viewer.clipinfoDir = cfg.clipDir;
 						
 						$.getJSON(viewer.getClipListPath())
 							.fail(function( jqxhr, textStatus, error ) {
@@ -224,7 +234,7 @@ var _ViewerClassDef = (function () {
 									entry.index = i;
 									entry.name = key;
 									entry.currentFrame = entry.startFrame;
-									entry.baseDir = viewer.cfgDir + "/" + viewer.dataDir + "/" + entry.baseDir;	// update base dir
+									entry.baseDir = viewer.getFrameFileDir(entry);	// update base dir
 								
 									// add toString method
 									entry.toString = function()
@@ -256,8 +266,12 @@ var _ViewerClassDef = (function () {
 			// load frame names from file
 			(function(viewer) {
 				assert(entry.frameFile != undefined);		// can't live without this guy
-				var framePath = viewer.cfgDir + "/" + entry.frameFile;
-				$.get(framePath)
+				$.get(viewer.getFrameListPath(entry))
+					.fail(function( jqxhr, textStatus ) {
+						var framePath = viewer.getFrameListPath(entry);
+						console.warn("Could not read file: " + framePath + " (" + textStatus + ")");		// warn dev
+						viewer.onFail("Failed to load frame file: " + framePath);	// warn user
+					})
 					.done(function( content ) {
 						// split text into lines
 						lines = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
@@ -268,25 +282,43 @@ var _ViewerClassDef = (function () {
 						var frameResponseCount = 0;
 						
 						// add one frame per line
-						for (var lineIdx in lines)
-						{
+						for (var lineIdx in lines) {
 							var frameName = lines[lineIdx].trim();
-							if (frameName.length == 0 || frameName[0] == "#") 
-							{
+							if (frameName.length == 0 || frameName[0] == "#") {
 								// ignore empty lines and comments
 								--entry.nFrames;
 								continue;
 							}
 							
 							var frameElement = $(document.createElement("img"));
-							frameElement.fileName = entry.baseDir + "/" + frameName;
+							frameElement.fileName = concatPath(entry.baseDir, frameName);
 							(function(frameElement) {
-								var onFrameResponse = function()
-								{
-									if (frameElement.index == entry.nFrames-1)
-									{
+								var onFrameResponse = function() {
+									if (frameElement.index == entry.nFrames-1) {
+										// we are done loading this clip's frame data
+										// now load the weights
 										viewer.entry = entry;
-										viewer.viewerElem.trigger("clipLoaded");
+										entry.weights = [];
+										if (typeof entry.weightFile !== "undefined") {
+											$.get(viewer.getFrameWeightPath(entry))
+												.fail(function( jqxhr, textStatus ) {
+													if (entry != viewer.entry) return;
+													
+													console.warn("Could not read weights file: " + viewer.getFrameWeightPath(entry) + " (" + textStatus + ")");		// warn dev
+													viewer.viewerElem.trigger("clipLoaded", [entry]);
+												})
+												.done(function( content ) {
+													if (entry != viewer.entry) return;
+													
+													// convert array of lines to array of floats
+													lines = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+													entry.weights = lines.map(parseFloat);
+													viewer.viewerElem.trigger("clipLoaded", [entry]);
+												});
+										}
+										else {
+											viewer.viewerElem.trigger("clipLoaded", [entry]);
+										}
 									}
 								};
 
@@ -314,10 +346,6 @@ var _ViewerClassDef = (function () {
 								});
 							})(frameElement);
 						}
-					})
-					.fail(function( jqxhr, textStatus ) {
-						console.warn("Could not read file: " + framePath + " (" + textStatus + ")");		// warn dev
-						viewer.onFail("Failed to load frame file: " + framePath);	// warn user
 					});
 			})(viewer);
 		},

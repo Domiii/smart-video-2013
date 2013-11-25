@@ -1,0 +1,5 @@
+{
+	"dataDir" : "../data",
+	"clipDir" : "clipinfo",
+	"clipFile" : "clips.json"
+}

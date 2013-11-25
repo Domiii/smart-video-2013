@@ -35,7 +35,8 @@
 	- Setup:
 		- Download data sets from:
 			- http://wordpress-jodoin.dmi.usherb.ca/static/dataset/dataset.zip
-			- http://burnbit.com/torrent/235660/SABS_Basic_rar
+			- ftp://ftp.informatik.uni-stuttgart.de/pub/vis/vis-out/bse/dataset/SABS-Basic.rar
+				- Alternative link: http://burnbit.com/torrent/235660/SABS_Basic_rar
 		- Extract to some folder data-root
 			- I placed it in: ../data/
 			- If you have different folder, update "cfg/config.json" correspondingly
@@ -43,5 +44,13 @@
 			1. Also extract them into that folder
 			2. Run "ls > cfg/dataset-name.txt" (a list of all image file names that comprise the video)
 			3. Add entry to cfg/clips.json
+			
+- Coding Conventions
+	- Indentation
+		- Replace tabs with 4 spaces
+	- Avoid raw pointers in C++
+		- When to use what kind of pointer: http://stackoverflow.com/a/8376611/2228771
+		- Ideas on avoiding pointers and why: http://blog.emptycrate.com/node/354
+	
 - TODO
 	- a lot more...

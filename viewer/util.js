@@ -10,16 +10,37 @@ function assert(stmt, msg)
 {
 	if (window.disableAssert) return;
 	
-	if (!stmt)
-	{
+	if (!stmt) {
 		var info = "";
-		if (msg)
-		{
+		if (msg) {
 			info += msg + " -- ";
 		}
 		info += "ASSERTION FAILED at " + getCallerInfo();
 		throw info;
 	}
+}
+
+function concatPath2(root, file1) {
+	var path = root;
+	if (!path.endsWith("/") && !path.endsWith("\\")) {
+		path += "/";
+	}
+	path += file1;
+	return path;
+}
+
+function concatPath(root, file1, file2, file3, file4) {
+	var path = concatPath2(root, file1);
+	if (typeof file2 !== "undefined") {
+		path = concatPath2(path, file2);
+		if (typeof file3 !== "undefined") {
+			path = concatPath2(path, file3);	
+			if (typeof file4 !== "undefined") {
+				path = concatPath2(path, file4);
+			}
+		}
+	}
+	return path;
 }
 
 // see: http://stackoverflow.com/questions/5533192/how-to-get-object-length-in-jquery
@@ -67,6 +88,15 @@ function getCurrentTimeMillis()
 {
 	return new Date().getTime();
 }
+
+
+// add utilities to string
+String.prototype.startsWith = function(prefix) {
+    return this.substring(0, prefix.length) === prefix;
+};
+String.prototype.endsWith = function(suffix) {
+    return this.substring(this.length - suffix.length, this.length) === suffix;
+};
 
 
 // add some utilities to jQuery
