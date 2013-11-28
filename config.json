@@ -1,5 +1,7 @@
 {
 	"dataDir" : "../data",
 	"clipDir" : "clipinfo",
-	"clipFile" : "clips.json"
+	"clipFile" : "clips.json",
+   "displayResults" : false,
+   "learningRate" : 0.3
 }

@@ -19,6 +19,8 @@ namespace SmartVideo
         DataFolder = JSonGetProperty(cfgRoot, "dataDir")->GetStringValue();
         ClipinfoDir = JSonGetProperty(cfgRoot, "clipDir")->GetStringValue();
         ClipListFile = JSonGetProperty(cfgRoot, "clipFile")->GetStringValue();
+		DisplayResults = JSonGetProperty(cfgRoot, "displayResults")->int_value;
+		LearningRate = JSonGetProperty(cfgRoot, "learningRate")->float_value;
 
         std::string clipListPath(GetClipListPath());
         json_value * clipRoot = JSonReadFile(clipListPath);
@@ -70,7 +72,7 @@ namespace SmartVideo
     void SmartVideoProcessor::ProcessInputFrame()
     {
         //update the background model
-        pMOG->operator()(frame, foregroundMask);
+        pMOG->operator()(frame, foregroundMask, Config.LearningRate);
 
         // compute and set weight
         SetWeight(iFrameNumber, ComputeFrameWeight(foregroundMask));

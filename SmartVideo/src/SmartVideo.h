@@ -37,6 +37,8 @@ namespace SmartVideo
         std::string DataFolder;
         std::string ClipinfoDir;
         std::string ClipListFile;
+
+		double LearningRate;
         
         std::vector<ClipEntry> ClipEntries;
         
