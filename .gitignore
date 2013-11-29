@@ -9,3 +9,17 @@ x64
 *.opensdf
 *.suo
 *.user
+
+# Backup files
+*.bak
+*.swp
+*~
+
+# Generated files
+clipinfo/*-weights
+
+# Data directory
+data/
+
+# git related
+.gitattributes
