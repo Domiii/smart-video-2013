@@ -1,6 +1,6 @@
 #include <string.h>
 #include "json.h"
-#include "util.h"
+#include "Util.h"
 
 // true if character represent a digit
 #define IS_DIGIT(c) (c >= '0' && c <= '9')

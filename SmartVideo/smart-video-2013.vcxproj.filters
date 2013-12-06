@@ -25,7 +25,7 @@
     <ClCompile Include="src\SmartVideo.cpp">
       <Filter>SmartVideo</Filter>
     </ClCompile>
-    <ClCompile Include="src\workers.cpp">
+    <ClCompile Include="src\Workers.cpp">
       <Filter>Util</Filter>
     </ClCompile>
   </ItemGroup>
@@ -36,13 +36,19 @@
     <ClInclude Include="src\SmartVideo.h">
       <Filter>SmartVideo</Filter>
     </ClInclude>
-    <ClInclude Include="src\util.h">
-      <Filter>Util</Filter>
-    </ClInclude>
     <ClInclude Include="src\JSonUtil.h">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="src\workers.h">
+    <ClInclude Include="src\ConsoleUtil.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Workers.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Util.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FileUtil.h">
       <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>

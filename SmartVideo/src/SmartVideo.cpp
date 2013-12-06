@@ -2,6 +2,8 @@
 
 #include <iomanip>
 
+#include "FileUtil.h"
+
 using namespace cv;
 using namespace std;
 using namespace Util;
@@ -213,17 +215,21 @@ namespace SmartVideo
             imshow("Frame", frame);
             imshow("Foreground", foregroundMask);
 
-            waitKey(10);        // TODO: Add a way to better control playback FPS
+            waitKey(10);        // TODO: Add a way to better control FPS
         }
 
-        // Dump the foreground information
+        // Dump foreground information
         std::string outfile = Config.GetForegroundFolder() + "/" + frameName + ".pbm";  // save as .pbm
-        try {
+        try 
+        {
+            MkDir(Config.GetForegroundFolder());        // make sure that folder exists
             bool saved = imwrite(outfile, foregroundMask);
             if (!saved) {
                 cerr << "Unable to save " << outfile << endl;
             }
-        } catch (runtime_error& ex) {
+        } 
+        catch (runtime_error& ex) 
+        {
             cerr << "Exception dumping foreground image in .pbm format: " << ex.what() << endl;
             exit(0);
         }

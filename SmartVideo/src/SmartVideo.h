@@ -1,9 +1,10 @@
 #ifndef SMARTVIDEOUTIL_H
 #define SMARTVIDEOUTIL_H
 
-#include "util.h"
+#include "Util.h"
+#include "ConsoleUtil.h"
 #include "JSonUtil.h"
-#include "workers.h"
+#include "Workers.h"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/background_segm.hpp>
