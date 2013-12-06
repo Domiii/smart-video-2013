@@ -1,5 +1,12 @@
 {
 	"dataDir" : "../data",
 	"clipDir" : "clipinfo",
-	"clipFile" : "clips.json"
+	"clipFile" : "clips.json",
+   "fgDir" : "cached/foreground",
+
+   "learningRate" : 0.3,
+   "displayResults" : false,
+
+   "useCachedForForeground" : false
+
 }

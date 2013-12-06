@@ -10,7 +10,6 @@ std::unique_ptr<SmartVideoProcessor> Processor;
 int main(int argc, char* argv[])
 {
     // setup config
-    Config.DisplayFrames = false;
     Config.ProgressBarLen = 40;
     Config.CfgFolder = "..";
     Config.CfgFile = "config.json";

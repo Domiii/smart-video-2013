@@ -37,31 +37,40 @@ namespace SmartVideo
         std::string DataFolder;
         std::string ClipinfoDir;
         std::string ClipListFile;
-        
+        std::string ForegroundDir;
+
+        double LearningRate;
+
         std::vector<ClipEntry> ClipEntries;
-        
+
         /// Get the path to the file containing all clip filenames.
         std::string GetClipListPath() const
         {
             return CfgFolder + "/" + ClipinfoDir + "/" + ClipListFile;
         }
-        
+
         /// Get the path to the file containing all frame weights.
         std::string GetWeightsPath(const ClipEntry& clipEntry) const
         {
             return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.WeightFile;
         }
-        
+
         /// Get the path to the file containing all frame filenames.
         std::string GetFrameFilePath(const ClipEntry& clipEntry) const
         {
             return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.ClipFile;
         }
-        
+
         /// Get the folder containing the files containing the given clip's frames
         std::string GetClipFolder(const ClipEntry& clipEntry) const
         {
             return CfgFolder + "/" + DataFolder + "/" + clipEntry.BaseFolder;
+        }
+
+        /// Get the folder containing the cahced foreground datas
+        std::string GetForegroundFolder() const
+        {
+            return CfgFolder + "/" + ClipinfoDir + "/" + ForegroundDir;
         }
 
         /// Read all config files
@@ -77,6 +86,7 @@ namespace SmartVideo
 
         const ClipEntry * clipEntry;                        // current clip
         int iFrameNumber;                                   // index of current frame in video stream
+        std::string frameName;                              // file name of current frame
         cv::Mat frame;                                      // current frame
         cv::Mat foregroundMask;                             // binary image, with only the foreground set to 1
         std::unique_ptr<cv::BackgroundSubtractor> pMOG;     // MOG Background subtractor
@@ -104,7 +114,7 @@ namespace SmartVideo
     private:
         /// Initialize this guy.
         void InitProcessing(const ClipEntry * clipEntry);
-        
+
         /// Finalize the process.
         void FinishProcessing();
 

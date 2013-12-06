@@ -19,6 +19,9 @@ namespace SmartVideo
         DataFolder = JSonGetProperty(cfgRoot, "dataDir")->GetStringValue();
         ClipinfoDir = JSonGetProperty(cfgRoot, "clipDir")->GetStringValue();
         ClipListFile = JSonGetProperty(cfgRoot, "clipFile")->GetStringValue();
+        ForegroundDir = JSonGetProperty(cfgRoot, "fgDir")->GetStringValue();
+        DisplayFrames = JSonGetProperty(cfgRoot, "displayResults")->int_value != 0;
+        LearningRate = JSonGetProperty(cfgRoot, "learningRate")->float_value;
 
         std::string clipListPath(GetClipListPath());
         json_value * clipRoot = JSonReadFile(clipListPath);
@@ -51,10 +54,9 @@ namespace SmartVideo
         this->clipEntry = clipEntry;
         pMOG = unique_ptr<BackgroundSubtractorMOG>(new BackgroundSubtractorMOG()); //MOG approach
         iFrameNumber = 0;
-        
+
         // allocate frame weights
         frameWeights.resize(clipEntry->GetFrameCount());
-        
         if (Config.DisplayFrames)
         {
             // create GUI windows (for debugging purposes)
@@ -74,21 +76,21 @@ namespace SmartVideo
     void SmartVideoProcessor::ProcessInputFrame()
     {
         //update the background model
-        pMOG->operator()(frame, foregroundMask, .8);
+        pMOG->operator()(frame, foregroundMask, Config.LearningRate);
 
         // compute and set weight
         SetWeight(iFrameNumber, ComputeFrameWeight(foregroundMask));
-        
+
         // draw progress
         UpdateDisplay();
     }
-    
+
 
     /// Compute some measure of frame "importance".
     float SmartVideoProcessor::ComputeFrameWeight(cv::Mat frame)
     {
         uint32 nForegroundPixels  = 0;
-        
+
         // count all foreground pixels
         int cols = frame.cols, rows = frame.rows;
         if (frame.isContinuous())
@@ -111,7 +113,7 @@ namespace SmartVideo
         float ratio = static_cast<float>(nForegroundPixels) / (cols * rows);
         return ratio;
     }
-    
+
     /// Finalize processing.
     void SmartVideoProcessor::FinishProcessing()
     {
@@ -136,7 +138,6 @@ namespace SmartVideo
     void SmartVideoProcessor::ProcessVideo(const ClipEntry& clipEntry)
     {
          InitProcessing(&clipEntry);
-         
         // TODO: Video support
 
         ////create the capture object
@@ -154,7 +155,7 @@ namespace SmartVideo
 
         //// delete capture object
         //capture.release();
-        
+
         FinishProcessing();
     }
 
@@ -172,6 +173,7 @@ namespace SmartVideo
         for_each(clipEntry.Filenames.begin() + iFrameNumber, clipEntry.Filenames.end(), [&](const string& fname) {
             // read image file
             string fpath = folder + "/" + fname;
+            frameName = fname;
             frame = imread(fpath);
             if(!frame.data)
             {
@@ -213,6 +215,19 @@ namespace SmartVideo
 
             waitKey(10);        // TODO: Add a way to better control playback FPS
         }
+
+        // Dump the foreground information
+        std::string outfile = Config.GetForegroundFolder() + "/" + frameName + ".pbm";  // save as .pbm
+        try {
+            bool saved = imwrite(outfile, foregroundMask);
+            if (!saved) {
+                cerr << "Unable to save " << outfile << endl;
+            }
+        } catch (runtime_error& ex) {
+            cerr << "Exception dumping foreground image in .pbm format: " << ex.what() << endl;
+            exit(0);
+        }
+
     }
 
     Job SmartVideoProcessor::GetNextIOJob()

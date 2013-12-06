@@ -18,6 +18,9 @@
 #include <cctype>
 #include <locale>
 
+// POSIX
+#include <dirent.h>
+
 // lightweight Json library
 #include "JSonUtil.h"
 
