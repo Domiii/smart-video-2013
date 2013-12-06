@@ -9,11 +9,11 @@ namespace Util
         assert(!isRunning);
         isRunning = true;
 
-        /*Job * job;
+        Job job;
         while (!isStopped && (job = taskQueue()))
         {
-            (*job)();
-        }*/
+            job();
+        }
 
         isRunning = false;
         isStopped = false;

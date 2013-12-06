@@ -1,16 +1,16 @@
 {
+	"road" : {
+		"fps" : 26,
+		"startFrame" : 5,
+		"baseDir" : "SABS/Test/Basic/",
+		"frameFile" : "basic.txt",
+		"weightFile" : "basic-weights"
+	},
 	"pedestrian" : {
 		"fps" : 26,
 		"startFrame" : 290,
 		"baseDir" : "dataset/baseline/pedestrians/input",
 		"frameFile" : "pedestrians.txt",
 		"weightFile" : "pedestrians-weights"
-	},
-	"road" : {
-		"fps" : 26,
-		"startFrame" : 420,
-		"baseDir" : "SABS/Test/Basic/",
-		"frameFile" : "basic.txt",
-		"weightFile" : "basic-weights"
 	}
 }

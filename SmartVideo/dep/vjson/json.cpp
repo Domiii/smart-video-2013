@@ -188,7 +188,7 @@ json_value *json_parse(const char *fname, char **error_pos, const char **error_d
 
     char *name = 0;
 
-    std::string sourceStr = SmartVideo::ReadText(fname);
+    std::string sourceStr = Util::ReadText(fname);
     char *source = new char[sourceStr.size()+2];
     sprintf(source, "%s", sourceStr.c_str());
 

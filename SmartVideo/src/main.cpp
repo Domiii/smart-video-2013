@@ -10,14 +10,14 @@ std::unique_ptr<SmartVideoProcessor> Processor;
 int main(int argc, char* argv[])
 {
     // setup config
-    Config.DisplayResults = false;
+    Config.DisplayFrames = false;
     Config.ProgressBarLen = 40;
     Config.CfgFolder = "..";
     Config.CfgFile = "config.json";
 
     if (!Config.InitializeConfig() || Config.ClipEntries.size() == 0)
     {
-        cerr << "ERROR: Invalid clip list file - " << Config.ClipListFile;
+        cerr << "ERROR: Invalid config or clip list file - " << Config.ClipListFile;
         exit(-1);
     }
 

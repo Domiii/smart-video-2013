@@ -55,14 +55,18 @@ namespace SmartVideo
         // allocate frame weights
         frameWeights.resize(clipEntry->GetFrameCount());
         
-        if (Config.DisplayResults)
+        if (Config.DisplayFrames)
         {
             // create GUI windows (for debugging purposes)
             namedWindow("Frame");
             namedWindow("Foreground");
         }
 
+        auto nTotalFrames = clipEntry->GetFrameCount() - 1;
+
         cout << "Processing " << clipEntry->Name << "..." << endl;
+        
+        progressBar.InitProgressBar(nTotalFrames);
     }
 
 
@@ -70,13 +74,13 @@ namespace SmartVideo
     void SmartVideoProcessor::ProcessInputFrame()
     {
         //update the background model
-        pMOG->operator()(frame, foregroundMask);
+        pMOG->operator()(frame, foregroundMask, .8);
 
         // compute and set weight
         SetWeight(iFrameNumber, ComputeFrameWeight(foregroundMask));
         
         // draw progress
-        DrawProgress();
+        UpdateDisplay();
     }
     
 
@@ -129,7 +133,8 @@ namespace SmartVideo
 
 
     /// Process video.
-    void  SmartVideoProcessor::ProcessVideo(const ClipEntry& clipEntry) {
+    void SmartVideoProcessor::ProcessVideo(const ClipEntry& clipEntry)
+    {
          InitProcessing(&clipEntry);
          
         // TODO: Video support
@@ -162,8 +167,8 @@ namespace SmartVideo
         string folder = Config.GetClipFolder(clipEntry);
 
         // iterate over all files:
-        //iFrameNumber = clipEntry.StartFrame;
-        iFrameNumber = 0;
+        iFrameNumber = clipEntry.StartFrame;
+        //iFrameNumber = 0;
         for_each(clipEntry.Filenames.begin() + iFrameNumber, clipEntry.Filenames.end(), [&](const string& fname) {
             // read image file
             string fpath = folder + "/" + fname;
@@ -185,35 +190,12 @@ namespace SmartVideo
         FinishProcessing();
     }
 
-    void SmartVideoProcessor::DrawProgress()
+    void SmartVideoProcessor::UpdateDisplay()
     {
-        // draw progress to console
-        auto nTotalFrames = clipEntry->GetFrameCount() - 1;
-        string frameNumberString = std::to_string(iFrameNumber) + " / " + std::to_string(nTotalFrames);
-        float progress = static_cast<float>(iFrameNumber) / nTotalFrames;
-        float lastProgress = static_cast<float>(iFrameNumber-1) / nTotalFrames;
-        int progressLen = static_cast<int>(Config.ProgressBarLen * progress + .5f);
-        int lastProgressLen = static_cast<int>(Config.ProgressBarLen * lastProgress + .5f);
-
-        // progress bar moved, or we processed the last frame
-        if (progressLen != lastProgressLen || iFrameNumber == nTotalFrames)
-        {
-            std::string progressString("|");
-            progressString.reserve(Config.ProgressBarLen+2);
-            for (int i = 1; i < Config.ProgressBarLen; ++i)
-            {
-                if (i <= progressLen)
-                    progressString += 'i';
-                else
-                    progressString += ' ';
-            }
-            progressString += '|';
-            
-            cout << '\r' << progressString << setw(15) << frameNumberString << " (" << setprecision(3) << (100 * progress) << "%)   ";
-            cout.flush();
-        }
+        progressBar.UpdateProgress(iFrameNumber);
         
-        if (Config.DisplayResults)
+        
+        if (Config.DisplayFrames)
         {
             //// display frame number in viewer
             //const Scalar black(255,255,255);
