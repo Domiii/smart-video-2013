@@ -1,6 +1,6 @@
 #include <string.h>
 #include "json.h"
-#include "util.h"
+#include "Util.h"
 
 // true if character represent a digit
 #define IS_DIGIT(c) (c >= '0' && c <= '9')
@@ -188,7 +188,7 @@ json_value *json_parse(const char *fname, char **error_pos, const char **error_d
 
     char *name = 0;
 
-    std::string sourceStr = SmartVideo::ReadText(fname);
+    std::string sourceStr = Util::ReadText(fname);
     char *source = new char[sourceStr.size()+2];
     sprintf(source, "%s", sourceStr.c_str());
 

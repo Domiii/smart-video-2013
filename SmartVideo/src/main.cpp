@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 
     if (!Config.InitializeConfig() || Config.ClipEntries.size() == 0)
     {
-        cerr << "ERROR: Invalid clip list file - " << Config.ClipListFile;
+        cerr << "ERROR: Invalid config or clip list file - " << Config.ClipListFile;
         exit(-1);
     }
 

@@ -1,6 +1,8 @@
 #ifndef UTIL_WORKER_H
 #define UTIL_WORKER_H
 
+#include "Util.h"
+
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -46,14 +48,32 @@ namespace Util
         void Stop() { isStopped = true; }
     };
 
+
     /// A pool of workers to work on one or multiple tasks in parallel.
     class WorkerPool
     {
+        // if the system does not reveal the amount, assign default
+        static const uint32 NMaxWorkersDefault = 4;
+
+
         std::vector<Worker> workers;
+        uint32 nMaxWorkers;
 
     public:
+        WorkerPool()
+        {
+            nMaxWorkers = std::thread::hardware_concurrency();
+            if (!nMaxWorkers)
+                nMaxWorkers = NMaxWorkersDefault;           // if the system does not reveal the amount, assign default
+        }
+
+        WorkerPool(int nMaxWorkers)
+        {
+            nMaxWorkers = nMaxWorkers;
+        }
+
         /// Lets nWorkers work on the given tasks.
-        /// Creates new workers, if there are not enough.
+        /// Constraint: nWorkers <= getMaxWorkerCount().
         void Start(int nWorkers, JobGenerator taskQueue);
     };
 }

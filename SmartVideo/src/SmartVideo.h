@@ -1,9 +1,10 @@
 #ifndef SMARTVIDEOUTIL_H
 #define SMARTVIDEOUTIL_H
 
-#include "util.h"
+#include "Util.h"
+#include "ConsoleUtil.h"
 #include "JSonUtil.h"
-#include "workers.h"
+#include "Workers.h"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/background_segm.hpp>
@@ -29,7 +30,7 @@ namespace SmartVideo
     /// Configuration for the SmartVideo processor.
     struct SmartVideoConfig
     {
-        bool DisplayResults;
+        bool DisplayFrames;
         int ProgressBarLen;
         std::string CfgFolder;
         std::string CfgFile;
@@ -96,10 +97,14 @@ namespace SmartVideo
 
         /// Worker to perform all I/O operations
         Util::Worker ioWorker;
+        
+        /// Progress bar used for showing progress in Console.
+        Util::ConsoleProgressBar progressBar;
 
 
         SmartVideoProcessor(SmartVideoConfig cfg) :
-            Config(cfg)
+            Config(cfg),
+            progressBar(cfg.ProgressBarLen)
         {
             //ioWorker.SetTaskQueue(std::bind(&SmartVideoProcessor::GetNextIOJob, this));
         }
@@ -123,12 +128,12 @@ namespace SmartVideo
         float ComputeFrameWeight(cv::Mat frame);
 
         /// Draw progress. TODO: Trigger event instead, and let user draw.
-        void DrawProgress();
+        void UpdateDisplay();
 
         /// Release all resources
         void Cleanup()
         {
-            if (Config.DisplayResults)
+            if (Config.DisplayFrames)
             {
                 cvDestroyWindow("Frame");
                 cvDestroyWindow("Foreground");

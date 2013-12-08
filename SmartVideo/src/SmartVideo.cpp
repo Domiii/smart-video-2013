@@ -2,6 +2,8 @@
 
 #include <iomanip>
 
+#include "FileUtil.h"
+
 using namespace cv;
 using namespace std;
 using namespace Util;
@@ -20,7 +22,7 @@ namespace SmartVideo
         ClipinfoDir = JSonGetProperty(cfgRoot, "clipDir")->GetStringValue();
         ClipListFile = JSonGetProperty(cfgRoot, "clipFile")->GetStringValue();
         ForegroundDir = JSonGetProperty(cfgRoot, "fgDir")->GetStringValue();
-        DisplayResults = (bool)JSonGetProperty(cfgRoot, "displayResults")->int_value;
+        DisplayFrames = JSonGetProperty(cfgRoot, "displayResults")->int_value != 0;
         LearningRate = JSonGetProperty(cfgRoot, "learningRate")->float_value;
         CachedImageType = JSonGetProperty(cfgRoot, "cachedImageType")->GetStringValue();
         UseCachedForForeground = (bool)JSonGetProperty(cfgRoot, "useCachedForForeground")->int_value;
@@ -59,15 +61,18 @@ namespace SmartVideo
 
         // allocate frame weights
         frameWeights.resize(clipEntry->GetFrameCount());
-
-        if (Config.DisplayResults)
+        if (Config.DisplayFrames)
         {
             // create GUI windows (for debugging purposes)
             namedWindow("Frame");
             namedWindow("Foreground");
         }
 
+        auto nTotalFrames = clipEntry->GetFrameCount() - 1;
+
         cout << "Processing " << clipEntry->Name << "..." << endl;
+        
+        progressBar.InitProgressBar(nTotalFrames);
     }
 
 
@@ -81,7 +86,7 @@ namespace SmartVideo
         SetWeight(iFrameNumber, ComputeFrameWeight(foregroundMask));
 
         // draw progress
-        DrawProgress();
+        UpdateDisplay();
     }
 
 
@@ -134,9 +139,9 @@ namespace SmartVideo
 
 
     /// Process video.
-    void  SmartVideoProcessor::ProcessVideo(const ClipEntry& clipEntry) {
-        InitProcessing(&clipEntry);
-
+    void SmartVideoProcessor::ProcessVideo(const ClipEntry& clipEntry)
+    {
+         InitProcessing(&clipEntry);
         // TODO: Video support
 
         ////create the capture object
@@ -237,35 +242,12 @@ namespace SmartVideo
         // TODO
     }
 
-    void SmartVideoProcessor::DrawProgress()
+    void SmartVideoProcessor::UpdateDisplay()
     {
-        // draw progress to console
-        auto nTotalFrames = clipEntry->GetFrameCount() - 1;
-        string frameNumberString = std::to_string(iFrameNumber) + " / " + std::to_string(nTotalFrames);
-        float progress = static_cast<float>(iFrameNumber) / nTotalFrames;
-        float lastProgress = static_cast<float>(iFrameNumber-1) / nTotalFrames;
-        int progressLen = static_cast<int>(Config.ProgressBarLen * progress + .5f);
-        int lastProgressLen = static_cast<int>(Config.ProgressBarLen * lastProgress + .5f);
-
-        // progress bar moved, or we processed the last frame
-        if (progressLen != lastProgressLen || iFrameNumber == nTotalFrames)
-        {
-            std::string progressString("|");
-            progressString.reserve(Config.ProgressBarLen+2);
-            for (int i = 1; i < Config.ProgressBarLen; ++i)
-            {
-                if (i <= progressLen)
-                    progressString += 'i';
-                else
-                    progressString += ' ';
-            }
-            progressString += '|';
-
-            cout << '\r' << progressString << setw(15) << frameNumberString << " (" << setprecision(3) << (100 * progress) << "%)   ";
-            cout.flush();
-        }
-
-        if (Config.DisplayResults)
+        progressBar.UpdateProgress(iFrameNumber);
+        
+        
+        if (Config.DisplayFrames)
         {
             //// display frame number in viewer
             //const Scalar black(255,255,255);
@@ -281,12 +263,13 @@ namespace SmartVideo
             imshow("Frame", frame);
             imshow("Foreground", foregroundMask);
 
-            waitKey(10);        // TODO: Add a way to better control playback FPS
+            waitKey(10);        // TODO: Add a way to better control FPS
         }
 
         // Dump the foreground information
         std::string outfile = Config.GetForegroundFolder() + "/" + frameName + "." + Config.CachedImageType;  // save as CachedImageType
         try {
+            MkDir(Config.GetForegroundFolder());        // make sure that folder exists
             bool saved = imwrite(outfile, foregroundMask);
             if (!saved) {
                 cerr << "Unable to save " << outfile << endl;

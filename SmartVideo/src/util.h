@@ -2,24 +2,27 @@
 #define UTIL_UTIL_H
 
 //C
-#include <stdio.h>
+#include <cstdio>
 
 //C++
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <chrono>
 
 #include <algorithm> 
 #include <functional> 
 #include <cctype>
 #include <locale>
 
+
 // lightweight Json library
 #include "JSonUtil.h"
 
-namespace SmartVideo
+namespace Util
 {
     typedef unsigned int uint32;
 
@@ -87,6 +90,7 @@ namespace SmartVideo
         in.seekg(0, std::ifstream::end);
         return in.tellg(); 
     }
+    
 }
 
 #endif // UTIL_UTIL_H
