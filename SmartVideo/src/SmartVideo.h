@@ -40,6 +40,8 @@ namespace SmartVideo
         std::string ForegroundDir;
 
         double LearningRate;
+        std::string CachedImageType;
+        bool UseCachedForForeground;
 
         std::vector<ClipEntry> ClipEntries;
 
@@ -132,6 +134,11 @@ namespace SmartVideo
                 cvDestroyWindow("Foreground");
             }
         }
+
+        // Sub-Procedures for each Part
+        void BackgroundSubtraction(const ClipEntry& clipEntry);
+        void ObjectDetection(const ClipEntry& clipEntry);
+        void ObjectTracking(const ClipEntry& clipEntry);
 
         Util::Job GetNextIOJob();
 

@@ -22,6 +22,8 @@ namespace SmartVideo
         ForegroundDir = JSonGetProperty(cfgRoot, "fgDir")->GetStringValue();
         DisplayResults = (bool)JSonGetProperty(cfgRoot, "displayResults")->int_value;
         LearningRate = JSonGetProperty(cfgRoot, "learningRate")->float_value;
+        CachedImageType = JSonGetProperty(cfgRoot, "cachedImageType")->GetStringValue();
+        UseCachedForForeground = (bool)JSonGetProperty(cfgRoot, "useCachedForForeground")->int_value;
 
         std::string clipListPath(GetClipListPath());
         json_value * clipRoot = JSonReadFile(clipListPath);
@@ -162,31 +164,77 @@ namespace SmartVideo
         // initialize
         InitProcessing(&clipEntry);
 
-        string folder = Config.GetClipFolder(clipEntry);
-
-        // iterate over all files:
-        //iFrameNumber = clipEntry.StartFrame;
-        iFrameNumber = 0;
-        for_each(clipEntry.Filenames.begin() + iFrameNumber, clipEntry.Filenames.end(), [&](const string& fname) {
-            // read image file
-            string fpath = folder + "/" + fname;
-            frameName = fname;
-            frame = imread(fpath);
-            if(!frame.data)
-            {
-                // error in opening an image file
-                cerr << "Unable to open image frame: " << fpath << endl;
-                exit(EXIT_FAILURE);
-            } 
-
-            // process image
-            ProcessInputFrame();
-
-            ++iFrameNumber;
-        });
+        // main stuffs
+        BackgroundSubtraction(clipEntry);
+        ObjectDetection(clipEntry);
+        ObjectTracking(clipEntry);
 
         // finalize the process
         FinishProcessing();
+    }
+
+    void SmartVideoProcessor::BackgroundSubtraction(const ClipEntry& clipEntry) {
+        if(!Config.UseCachedForForeground) {
+            string folder = Config.GetClipFolder(clipEntry);
+            // iterate over all files:
+            //iFrameNumber = clipEntry.StartFrame;
+            iFrameNumber = 0;
+            for_each(clipEntry.Filenames.begin() + iFrameNumber, clipEntry.Filenames.end(), [&](const string& fname) {
+                // read image file
+                string fpath = folder + "/" + fname;
+                frameName = fname;
+                frame = imread(fpath);
+                if(!frame.data)
+                {
+                    // error in opening an image file
+                    cerr << "Unable to open image frame: " << fpath << endl;
+                    exit(EXIT_FAILURE);
+                } 
+
+                // process image
+                ProcessInputFrame();
+
+                ++iFrameNumber;
+            });
+        }
+    }
+
+    void SmartVideoProcessor::ObjectDetection(const ClipEntry& clipEntry) {
+        // TODO
+        if(true/*!Config.UseCachedForObjectDetection*/) {
+            string folder = Config.GetClipFolder(clipEntry);
+            // iterate over all files:
+            iFrameNumber = 0;
+            //iFrameNumber = clipEntry.StartFrame;
+            for_each(clipEntry.Filenames.begin() + iFrameNumber, clipEntry.Filenames.end(), [&](const string& fname) {
+                // read image file
+                string imgpath = folder + "/" + fname;
+                frameName = fname;
+                frame = imread(imgpath);
+                if(!frame.data)
+                {
+                    // error in opening an image file
+                    cerr << "Unable to open image frame: " << imgpath << endl;
+                    exit(EXIT_FAILURE);
+                } 
+
+                // read foreground mask
+                string fgpath = Config.GetForegroundFolder() + "/" + frameName + "." + Config.CachedImageType;
+                cv::Mat fgmask = imread(fgpath);
+                if(!frame.data)
+                {
+                    // error in opening an image file
+                    cerr << "Unable to open foreground mask: " << fgpath << endl;
+                    exit(EXIT_FAILURE);
+                } 
+
+                ++iFrameNumber;
+            });
+        }
+    }
+
+    void SmartVideoProcessor::ObjectTracking(const ClipEntry& clipEntry) {
+        // TODO
     }
 
     void SmartVideoProcessor::DrawProgress()
@@ -237,14 +285,14 @@ namespace SmartVideo
         }
 
         // Dump the foreground information
-        std::string outfile = Config.GetForegroundFolder() + "/" + frameName + ".pbm";  // save as .pbm
+        std::string outfile = Config.GetForegroundFolder() + "/" + frameName + "." + Config.CachedImageType;  // save as CachedImageType
         try {
             bool saved = imwrite(outfile, foregroundMask);
             if (!saved) {
                 cerr << "Unable to save " << outfile << endl;
             }
         } catch (runtime_error& ex) {
-            cerr << "Exception dumping foreground image in .pbm format: " << ex.what() << endl;
+            cerr << "Exception dumping foreground image in ." << Config.CachedImageType << " format: " << ex.what() << endl;
             exit(0);
         }
 
