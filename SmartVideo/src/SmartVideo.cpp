@@ -3,6 +3,7 @@
 #include <iomanip>
 
 #include "FileUtil.h"
+#include <functional>
 
 using namespace cv;
 using namespace std;
@@ -54,8 +55,17 @@ namespace SmartVideo
     void SmartVideoProcessor::InitProcessing(const ClipEntry* clipEntry)
     {
         this->clipEntry = clipEntry;
+
+        // wait for previous I/O operations to stop
+        ioPool.Stop();
+        ioPool.Join();
+
+        // start I/O queue
+        ioPool.AddWorkers(1, std::bind(&SmartVideoProcessor::ReadNextInputFrame, this, std::placeholders::_1));
+
         pMOG = unique_ptr<BackgroundSubtractorMOG>(new BackgroundSubtractorMOG()); //MOG approach
-        iFrameNumber = 0;
+        frameInBuffer.Clear();
+        frameOutBuffer.Clear();
 
         // allocate frame weights
         frameWeights.resize(clipEntry->GetFrameCount());
@@ -74,35 +84,21 @@ namespace SmartVideo
     }
 
 
-    /// Processes the current frame.
-    void SmartVideoProcessor::ProcessInputFrame()
-    {
-        //update the background model
-        pMOG->operator()(frame, foregroundMask, Config.LearningRate);
-
-        // compute and set weight
-        SetWeight(iFrameNumber, ComputeFrameWeight(foregroundMask));
-
-        // draw progress
-        UpdateDisplay();
-    }
-
-
     /// Compute some measure of frame "importance".
-    float SmartVideoProcessor::ComputeFrameWeight(cv::Mat frame)
+    float SmartVideoProcessor::ComputeFrameWeight(FrameInfo& frameInfo)
     {
         uint32 nForegroundPixels  = 0;
 
         // count all foreground pixels
-        int cols = frame.cols, rows = frame.rows;
-        if (frame.isContinuous())
+        int cols = frameInfo.Frame.cols, rows = frameInfo.Frame.rows;
+        if (frameInfo.Frame.isContinuous())
         {
             cols *= rows;
             rows = 1;
         }
         for(int i = 0; i < rows; i++)
         {
-            auto Mi = frame.ptr<uchar>(i);
+            auto Mi = frameInfo.Frame.ptr<uchar>(i);
             for(int j = 0; j < cols; j++)
             {
                 auto value = Mi[j];
@@ -167,36 +163,44 @@ namespace SmartVideo
         // initialize
         InitProcessing(&clipEntry);
 
-        string folder = Config.GetClipFolder(clipEntry);
-
         // iterate over all files:
-        iFrameNumber = clipEntry.StartFrame;
-        //iFrameNumber = 0;
-        for_each(clipEntry.Filenames.begin() + iFrameNumber, clipEntry.Filenames.end(), [&](const string& fname) {
-            // read image file
-            string fpath = folder + "/" + fname;
-            frameName = fname;
-            frame = imread(fpath);
-            if(!frame.data)
-            {
-                // error in opening an image file
-                cerr << "Unable to open image frame: " << fpath << endl;
-                exit(EXIT_FAILURE);
-            } 
-
+        JobIndex iFrame = clipEntry.StartFrame;
+        for_each(clipEntry.Filenames.begin() + iFrame, clipEntry.Filenames.end(), [&](const string& fname) {
             // process image
-            ProcessInputFrame();
+            ProcessFrame(iFrame);
 
-            ++iFrameNumber;
+            ++iFrame;
         });
 
         // finalize the process
         FinishProcessing();
     }
 
-    void SmartVideoProcessor::UpdateDisplay()
+    void SmartVideoProcessor::ProcessFrame(JobIndex iFrame)
     {
-        progressBar.UpdateProgress(iFrameNumber);
+        // get next frame from queue
+        FrameInfo& info = frameInBuffer.Pop();
+
+        // frames should always be read in the correct order
+        assert(info.FrameIndex == iFrame);
+
+        //update the background model
+        pMOG->operator()(info.Frame, info.FrameForegroundMask, Config.LearningRate);
+
+        // compute and set weight
+        SetWeight(iFrame, ComputeFrameWeight(info));
+
+        // draw progress
+        UpdateDisplay(info);
+    }
+
+    void SmartVideoProcessor::UpdateDisplay(FrameInfo& info)
+    {
+        stringstream strstr;
+        string statusString;
+        strstr << " -- input buffer: " << frameInBuffer.GetSize() << "/" << Config.MaxIOQueueSize << "";
+        statusString = strstr.str();
+        progressBar.UpdateProgress(info.FrameIndex, statusString);
         
         
         if (Config.DisplayFrames)
@@ -204,26 +208,24 @@ namespace SmartVideo
             //// display frame number in viewer
             //const Scalar black(255,255,255);
             //const Scalar white(0,0,0);
-
             //// clear text area
             //rectangle(frame, cv::Point(10, 2), cv::Point(100, 20), black, -1);
-
             //// draw frame number
             //putText(frame, frameNumberString.c_str(), cv::Point(15, 15), FONT_HERSHEY_SIMPLEX, 0.5 , white);
 
             //show the current frame and the fg mask
-            imshow("Frame", frame);
-            imshow("Foreground", foregroundMask);
+            imshow("Frame", info.Frame);
+            imshow("Foreground", info.FrameForegroundMask);
 
             waitKey(10);        // TODO: Add a way to better control FPS
         }
 
         // Dump foreground information
-        std::string outfile = Config.GetForegroundFolder() + "/" + frameName + ".pbm";  // save as .pbm
+        std::string outfile = Config.GetForegroundFolder() + "/" + info.FrameName + ".pbm";  // save as .pbm
         try 
         {
             MkDir(Config.GetForegroundFolder());        // make sure that folder exists
-            bool saved = imwrite(outfile, foregroundMask);
+            bool saved = imwrite(outfile, info.FrameForegroundMask);
             if (!saved) {
                 cerr << "Unable to save " << outfile << endl;
             }
@@ -233,11 +235,57 @@ namespace SmartVideo
             cerr << "Exception dumping foreground image in .pbm format: " << ex.what() << endl;
             exit(0);
         }
-
     }
 
-    Job SmartVideoProcessor::GetNextIOJob()
+
+    bool SmartVideoProcessor::ReadNextInputFrame(JobIndex iFrame)
     {
-        return nullptr;
+        // TODO: Also write outqueue back
+
+        iFrame += clipEntry->StartFrame;
+        
+        if (iFrame >= clipEntry->GetFrameCount())
+        {
+            return false;
+        }
+
+        if (!clipEntry)
+        {
+            // yield time slice
+            this_thread::sleep_for(chrono::milliseconds(0));
+            return true;
+        }
+
+        string folder = Config.GetClipFolder(*clipEntry);
+        auto fname = *(clipEntry->Filenames.begin() + iFrame);
+        string fpath = folder + "/" + fname;
+
+        // read image file
+        FrameInfo frameInfo(iFrame);
+        frameInfo.FrameName = fname;
+        frameInfo.Frame = imread(fpath);
+        if(!frameInfo.Frame.data)
+        {
+            // error in opening an image file
+            cerr << "Unable to open image frame: " << fpath << endl;
+            exit(EXIT_FAILURE);
+        } 
+
+        // add image to queue
+        frameInBuffer.Push(frameInfo);
+        return true;
+    }
+
+
+    void SmartVideoProcessor::Cleanup()
+    {
+        if (Config.DisplayFrames)
+        {
+            cvDestroyWindow("Frame");
+            cvDestroyWindow("Foreground");
+        }
+
+        ioPool.Stop();
+        ioPool.Join();
     }
 }

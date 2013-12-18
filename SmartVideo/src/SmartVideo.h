@@ -11,6 +11,8 @@
 
 #include <memory>
 
+#include <queue>
+
 
 namespace SmartVideo
 {
@@ -32,6 +34,8 @@ namespace SmartVideo
     {
         bool DisplayFrames;
         int ProgressBarLen;
+        int MaxIOQueueSize;
+
         std::string CfgFolder;
         std::string CfgFile;
 
@@ -43,6 +47,9 @@ namespace SmartVideo
         double LearningRate;
 
         std::vector<ClipEntry> ClipEntries;
+
+        /// Amount of frames in this clip
+        int GetFrameCount() const { return ClipEntries.size(); }
 
         /// Get the path to the file containing all clip filenames.
         std::string GetClipListPath() const
@@ -79,6 +86,20 @@ namespace SmartVideo
     };
 
 
+    /// Data and meta-data of a frame, to be stored in frame buffer.
+    struct FrameInfo
+    {
+        std::string FrameName;
+        /// Frame index
+        Util::JobIndex FrameIndex;
+        /// Frame data
+        cv::Mat Frame;
+        /// Binary image, with only foreground set to 1
+        cv::Mat FrameForegroundMask;
+
+        FrameInfo(Util::JobIndex frameIndex) : FrameIndex(frameIndex) {}
+    };
+
 
     /// The class that does the "SmartVideo" processing.
     struct SmartVideoProcessor
@@ -86,15 +107,15 @@ namespace SmartVideo
         const SmartVideoConfig Config;
 
         const ClipEntry * clipEntry;                        // current clip
-        int iFrameNumber;                                   // index of current frame in video stream
-        std::string frameName;                              // file name of current frame
-        cv::Mat frame;                                      // current frame
-        cv::Mat foregroundMask;                             // binary image, with only the foreground set to 1
+        /// Stores frames read from disk
+        Util::ThreadSafeQueue<FrameInfo> frameInBuffer;
+        /// Stores frames to be written back to disk
+        Util::ThreadSafeQueue<FrameInfo> frameOutBuffer;
         std::unique_ptr<cv::BackgroundSubtractor> pMOG;     // MOG Background subtractor
         std::vector<float> frameWeights;                    // weight of every frame
 
-        /// Worker to perform all I/O operations
-        Util::Worker ioWorker;
+        /// WorkerPool for multi-threaded I/O
+        Util::WorkerPool ioPool;
         
         /// Progress bar used for showing progress in Console.
         Util::ConsoleProgressBar progressBar;
@@ -102,9 +123,11 @@ namespace SmartVideo
 
         SmartVideoProcessor(SmartVideoConfig cfg) :
             Config(cfg),
+            clipEntry(nullptr),
+            frameInBuffer(cfg.MaxIOQueueSize),
+            frameOutBuffer(cfg.MaxIOQueueSize),
             progressBar(cfg.ProgressBarLen)
         {
-            //ioWorker.SetTaskQueue(std::bind(&SmartVideoProcessor::GetNextIOJob, this));
         }
 
         virtual ~SmartVideoProcessor()
@@ -120,25 +143,19 @@ namespace SmartVideo
         void FinishProcessing();
 
         /// Processes the frame that was last read from the input stream.
-        void ProcessInputFrame();
+        void ProcessFrame(Util::JobIndex iFrame);
 
         /// Computes the weight of a uchar binary image.
-        float ComputeFrameWeight(cv::Mat frame);
+        float ComputeFrameWeight(FrameInfo& info);
 
         /// Draw progress. TODO: Trigger event instead, and let user draw.
-        void UpdateDisplay();
+        void UpdateDisplay(FrameInfo& info);
 
         /// Release all resources
-        void Cleanup()
-        {
-            if (Config.DisplayFrames)
-            {
-                cvDestroyWindow("Frame");
-                cvDestroyWindow("Foreground");
-            }
-        }
+        void Cleanup();
 
-        Util::Job GetNextIOJob();
+        /// Task queue for file-reader thread.
+        bool ReadNextInputFrame(Util::JobIndex iFrame);
 
     public:
         /// Set the weight of the given frame.

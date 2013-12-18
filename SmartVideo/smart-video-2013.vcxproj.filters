@@ -51,5 +51,8 @@
     <ClInclude Include="src\FileUtil.h">
       <Filter>Util</Filter>
     </ClInclude>
+    <ClInclude Include="src\ThreadUtil.h">
+      <Filter>Util</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

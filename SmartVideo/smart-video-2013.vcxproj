@@ -30,6 +30,7 @@
     <ClInclude Include="src\FileUtil.h" />
     <ClInclude Include="src\JSonUtil.h" />
     <ClInclude Include="src\SmartVideo.h" />
+    <ClInclude Include="src\ThreadUtil.h" />
     <ClInclude Include="src\Util.h" />
     <ClInclude Include="src\Workers.h" />
   </ItemGroup>

@@ -7,12 +7,24 @@ using namespace SmartVideo;
 SmartVideoConfig Config;
 std::unique_ptr<SmartVideoProcessor> Processor;
 
+class X
+{
+    X(const X&);
+    X operator=(const X&);
+
+public:
+    X() {}
+};
+
 int main(int argc, char* argv[])
 {
     // setup config
-    Config.ProgressBarLen = 40;
     Config.CfgFolder = "..";
     Config.CfgFile = "config.json";
+
+    // some processor-specific things
+    Config.ProgressBarLen = 50;
+    Config.MaxIOQueueSize = 50;
 
     if (!Config.InitializeConfig() || Config.ClipEntries.size() == 0)
     {

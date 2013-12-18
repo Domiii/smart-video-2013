@@ -3,6 +3,7 @@
 
 //C
 #include <cstdio>
+#include <cassert>
 
 //C++
 #include <string>
@@ -17,6 +18,9 @@
 #include <functional> 
 #include <cctype>
 #include <locale>
+
+#include <mutex>
+#include <condition_variable>
 
 
 // lightweight Json library
@@ -90,7 +94,6 @@ namespace Util
         in.seekg(0, std::ifstream::end);
         return in.tellg(); 
     }
-    
 }
 
 #endif // UTIL_UTIL_H
