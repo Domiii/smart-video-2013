@@ -32,10 +32,13 @@ namespace SmartVideo
     /// Configuration for the SmartVideo processor.
     struct SmartVideoConfig
     {
+        // SmartVideoProcessor-specific configuration
         bool DisplayFrames;
         int ProgressBarLen;
         int MaxIOQueueSize;
+        int NReadThreads;
 
+        // Data configuration
         std::string CfgFolder;
         std::string CfgFile;
 
@@ -45,6 +48,8 @@ namespace SmartVideo
         std::string ForegroundDir;
 
         double LearningRate;
+        std::string CachedImageType;
+        bool UseCachedForForeground;
 
         std::vector<ClipEntry> ClipEntries;
 
@@ -98,6 +103,11 @@ namespace SmartVideo
         cv::Mat FrameForegroundMask;
 
         FrameInfo(Util::JobIndex frameIndex) : FrameIndex(frameIndex) {}
+
+        bool operator<(const FrameInfo& other) const
+        {
+            return FrameIndex < other.FrameIndex;
+        }
     };
 
 
@@ -111,6 +121,9 @@ namespace SmartVideo
         Util::ThreadSafeQueue<FrameInfo> frameInBuffer;
         /// Stores frames to be written back to disk
         Util::ThreadSafeQueue<FrameInfo> frameOutBuffer;
+
+        /// Index of next frame to be processed
+        Util::JobIndex iNextProcessFrame;
         std::unique_ptr<cv::BackgroundSubtractor> pMOG;     // MOG Background subtractor
         std::vector<float> frameWeights;                    // weight of every frame
 
@@ -124,8 +137,8 @@ namespace SmartVideo
         SmartVideoProcessor(SmartVideoConfig cfg) :
             Config(cfg),
             clipEntry(nullptr),
-            frameInBuffer(cfg.MaxIOQueueSize),
-            frameOutBuffer(cfg.MaxIOQueueSize),
+            frameInBuffer(cfg.MaxIOQueueSize, true, std::bind(&SmartVideoProcessor::IsNextInputFrame, this, std::placeholders::_1)),
+            frameOutBuffer(cfg.MaxIOQueueSize, false),
             progressBar(cfg.ProgressBarLen)
         {
         }
@@ -143,7 +156,7 @@ namespace SmartVideo
         void FinishProcessing();
 
         /// Processes the frame that was last read from the input stream.
-        void ProcessFrame(Util::JobIndex iFrame);
+        void ProcessNextFrame();
 
         /// Computes the weight of a uchar binary image.
         float ComputeFrameWeight(FrameInfo& info);
@@ -157,7 +170,17 @@ namespace SmartVideo
         /// Task queue for file-reader thread.
         bool ReadNextInputFrame(Util::JobIndex iFrame);
 
+        // Sub-Procedures for each Part
+        void BackgroundSubtraction(FrameInfo& info);
+        void ObjectDetection(FrameInfo& info);
+        void ObjectTracking(FrameInfo& info);
+
     public:
+        bool IsNextInputFrame(const FrameInfo& info) const 
+        { 
+            return info.FrameIndex == iNextProcessFrame; 
+        }
+
         /// Set the weight of the given frame.
         void SetWeight(int iFrame, float weight)
         {

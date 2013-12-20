@@ -19,12 +19,16 @@ namespace SmartVideo
         json_value * cfgRoot = JSonReadFile(cfgPath);
         if (!cfgRoot) return false;
 
+        // TODO: Video files
+
         DataFolder = JSonGetProperty(cfgRoot, "dataDir")->GetStringValue();
         ClipinfoDir = JSonGetProperty(cfgRoot, "clipDir")->GetStringValue();
         ClipListFile = JSonGetProperty(cfgRoot, "clipFile")->GetStringValue();
         ForegroundDir = JSonGetProperty(cfgRoot, "fgDir")->GetStringValue();
         DisplayFrames = JSonGetProperty(cfgRoot, "displayResults")->int_value != 0;
         LearningRate = JSonGetProperty(cfgRoot, "learningRate")->float_value;
+        CachedImageType = JSonGetProperty(cfgRoot, "cachedImageType")->GetStringValue();
+        UseCachedForForeground = (bool)JSonGetProperty(cfgRoot, "useCachedForForeground")->int_value;
 
         std::string clipListPath(GetClipListPath());
         json_value * clipRoot = JSonReadFile(clipListPath);
@@ -60,9 +64,6 @@ namespace SmartVideo
         ioPool.Stop();
         ioPool.Join();
 
-        // start I/O queue
-        ioPool.AddWorkers(1, std::bind(&SmartVideoProcessor::ReadNextInputFrame, this, std::placeholders::_1));
-
         pMOG = unique_ptr<BackgroundSubtractorMOG>(new BackgroundSubtractorMOG()); //MOG approach
         frameInBuffer.Clear();
         frameOutBuffer.Clear();
@@ -77,6 +78,9 @@ namespace SmartVideo
         }
 
         auto nTotalFrames = clipEntry->GetFrameCount() - 1;
+
+        // start I/O queue
+        ioPool.AddWorkers(Config.NReadThreads, std::bind(&SmartVideoProcessor::ReadNextInputFrame, this, std::placeholders::_1));
 
         cout << "Processing " << clipEntry->Name << "..." << endl;
         
@@ -112,6 +116,7 @@ namespace SmartVideo
         return ratio;
     }
 
+
     /// Finalize processing.
     void SmartVideoProcessor::FinishProcessing()
     {
@@ -129,7 +134,6 @@ namespace SmartVideo
 
         Cleanup();
     }
-
 
 
     /// Process video.
@@ -157,6 +161,7 @@ namespace SmartVideo
         FinishProcessing();
     }
 
+
     /// Process sequence of images.
     void SmartVideoProcessor::ProcessImages(const ClipEntry& clipEntry) 
     {
@@ -164,35 +169,67 @@ namespace SmartVideo
         InitProcessing(&clipEntry);
 
         // iterate over all files:
-        JobIndex iFrame = clipEntry.StartFrame;
-        for_each(clipEntry.Filenames.begin() + iFrame, clipEntry.Filenames.end(), [&](const string& fname) {
+        iNextProcessFrame = clipEntry.StartFrame;
+        for_each(clipEntry.Filenames.begin() + iNextProcessFrame, clipEntry.Filenames.end(), [&](const string& fname) {
             // process image
-            ProcessFrame(iFrame);
+            ProcessNextFrame();
 
-            ++iFrame;
+            ++iNextProcessFrame;
         });
 
         // finalize the process
         FinishProcessing();
     }
 
-    void SmartVideoProcessor::ProcessFrame(JobIndex iFrame)
+
+    void SmartVideoProcessor::ProcessNextFrame()
     {
         // get next frame from queue
-        FrameInfo& info = frameInBuffer.Pop();
-
-        // frames should always be read in the correct order
-        assert(info.FrameIndex == iFrame);
-
-        //update the background model
-        pMOG->operator()(info.Frame, info.FrameForegroundMask, Config.LearningRate);
+        FrameInfo info = frameInBuffer.Pop();
+        
+        // main stuffs
+        BackgroundSubtraction(info);
+        ObjectDetection(info);
+        ObjectTracking(info);
 
         // compute and set weight
-        SetWeight(iFrame, ComputeFrameWeight(info));
+        SetWeight(iNextProcessFrame, ComputeFrameWeight(info));
 
         // draw progress
         UpdateDisplay(info);
     }
+
+
+    void SmartVideoProcessor::BackgroundSubtraction(FrameInfo& info) {
+        if(!Config.UseCachedForForeground) {
+            //update the background model
+            pMOG->operator()(info.Frame, info.FrameForegroundMask, Config.LearningRate);
+        }
+    }
+
+
+    void SmartVideoProcessor::ObjectDetection(FrameInfo& info) {
+        if(false/*!Config.UseCachedForObjectDetection*/) {
+
+            // read foreground mask
+            string fgpath = Config.GetForegroundFolder() + "/" + info.FrameName + "." + Config.CachedImageType;
+            cv::Mat fgmask = imread(fgpath);
+            if(!fgmask.data)
+            {
+                // error in opening an image file
+                cerr << "Unable to open foreground mask: " << fgpath << endl;
+                exit(EXIT_FAILURE);
+            }
+
+            // TODO
+        }
+    }
+
+
+    void SmartVideoProcessor::ObjectTracking(FrameInfo& info) {
+        // TODO
+    }
+    
 
     void SmartVideoProcessor::UpdateDisplay(FrameInfo& info)
     {
@@ -220,19 +257,16 @@ namespace SmartVideo
             waitKey(10);        // TODO: Add a way to better control FPS
         }
 
-        // Dump foreground information
-        std::string outfile = Config.GetForegroundFolder() + "/" + info.FrameName + ".pbm";  // save as .pbm
-        try 
-        {
+        // Dump the foreground information
+        std::string outfile = Config.GetForegroundFolder() + "/" + info.FrameName + "." + Config.CachedImageType;  // save as CachedImageType
+        try {
             MkDir(Config.GetForegroundFolder());        // make sure that folder exists
             bool saved = imwrite(outfile, info.FrameForegroundMask);
             if (!saved) {
                 cerr << "Unable to save " << outfile << endl;
             }
-        } 
-        catch (runtime_error& ex) 
-        {
-            cerr << "Exception dumping foreground image in .pbm format: " << ex.what() << endl;
+        } catch (runtime_error& ex) {
+            cerr << "Exception dumping foreground image in ." << Config.CachedImageType << " format: " << ex.what() << endl;
             exit(0);
         }
     }
@@ -240,7 +274,7 @@ namespace SmartVideo
 
     bool SmartVideoProcessor::ReadNextInputFrame(JobIndex iFrame)
     {
-        // TODO: Also write outqueue back
+        // TODO: Also write out buffer back to file
 
         iFrame += clipEntry->StartFrame;
         
@@ -252,7 +286,7 @@ namespace SmartVideo
         if (!clipEntry)
         {
             // yield time slice
-            this_thread::sleep_for(chrono::milliseconds(0));
+            this_thread::sleep_for(chrono::milliseconds(1));
             return true;
         }
 

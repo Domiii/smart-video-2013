@@ -13,7 +13,6 @@ namespace Util
     {   
         while (!pool.isStopped)
         {
-            pool.iNextJobIndex.store(0);
             while (!pool.isStopped && pool.job && isRunning)
             {
                 isRunning = pool.job(pool.iNextJobIndex++);
@@ -69,6 +68,7 @@ namespace Util
             std::unique_lock<std::mutex> lk(poolLock);
             SetJob(job);
             isStopped = false;
+            iNextJobIndex.store(0);
 
             // Add new workers
             for (int i = 0; i < nWorkers; ++i)

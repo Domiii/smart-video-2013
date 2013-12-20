@@ -81,9 +81,9 @@ namespace Util
             // update value
             nValue = nNewValue;
 
-            // update speed
-            std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-            auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(lastUpdateTime - now).count();
+            // TODO: update speed
+            /*std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+            auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(lastUpdateTime - now).count();*/
             
         }
     };

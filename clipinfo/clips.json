@@ -1,14 +1,22 @@
 {
+	"cafe-1" : {
+		"type" : "vid",
+		"startFrame" : 0,
+		"location" : "a.mp4"
+		"weightFile" : "cafe1-weights"
+	},
 	"pedestrian" : {
-		"fps" : 26,
+		"type" : "img",
 		"startFrame" : 290,
+		"fps" : 26,
 		"baseDir" : "dataset/baseline/pedestrians/input",
 		"frameFile" : "pedestrians.txt",
 		"weightFile" : "pedestrians-weights"
 	},
 	"road" : {
-		"fps" : 26,
+		"type" : "img",
 		"startFrame" : 5,
+		"fps" : 26,
 		"baseDir" : "SABS/Test/Basic/",
 		"frameFile" : "basic.txt",
 		"weightFile" : "basic-weights"

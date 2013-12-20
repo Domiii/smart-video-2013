@@ -4,9 +4,10 @@
 	"clipFile" : "clips.json",
    "fgDir" : "cached/foreground",
 
-   "learningRate" : 0.3,
+   "learningRate" : 0.05,
    "displayResults" : false,
 
-   "useCachedForForeground" : false
+   "cachedImageType" : "bmp",
+   "useCachedForForeground" : true
 
 }
