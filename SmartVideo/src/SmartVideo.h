@@ -8,6 +8,7 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/background_segm.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <memory>
 
@@ -16,17 +17,43 @@
 
 namespace SmartVideo
 {
-    /// Represents a clip (currently: Sequence of images)
+    enum class ClipType
+    {
+        ImageSequence,
+        Video
+    };
+
+    /// Represents a clip (video file, or sequence of images)
     struct ClipEntry
     {
+        ClipType Type;
         std::string Name;
         int StartFrame;
         std::string BaseFolder;
-        std::string ClipFile;
         std::string WeightFile;
+
+        /// If Type == Video, this is the video file name, else it is the list of images in the sequence
+        std::string ClipFile;
+
+        /// If Type == ImageSequence, contains all image file names
         std::vector<std::string> Filenames;
 
-        size_t GetFrameCount() const { return Filenames.size(); }
+        /// If Type == Video, allows access to the underlying video file
+        cv::VideoCapture Video;
+
+        /// TODO: Make const
+        size_t GetFrameCount() 
+        {
+            if (Type == ClipType::Video)
+            {
+                // TODO: Verify this approach
+                return Video.get(CV_CAP_PROP_FRAME_COUNT);
+            }
+            else
+            {
+                return Filenames.size(); 
+            }
+        }
     };
 
     /// Configuration for the SmartVideo processor.
@@ -80,6 +107,12 @@ namespace SmartVideo
             return CfgFolder + "/" + DataFolder + "/" + clipEntry.BaseFolder;
         }
 
+        /// Get the video file name.
+        std::string GetVideoFile(const ClipEntry& clipEntry) const
+        {
+            return CfgFolder + "/" + DataFolder + "/" + clipEntry.BaseFolder + "/" + clipEntry.ClipFile;
+        }
+
         /// Get the folder containing the cahced foreground datas
         std::string GetForegroundFolder() const
         {
@@ -116,7 +149,7 @@ namespace SmartVideo
     {
         const SmartVideoConfig Config;
 
-        const ClipEntry * clipEntry;                        // current clip
+        ClipEntry * clipEntry;                        // current clip
         /// Stores frames read from disk
         Util::ThreadSafeQueue<FrameInfo> frameInBuffer;
         /// Stores frames to be written back to disk
@@ -150,7 +183,7 @@ namespace SmartVideo
 
     private:
         /// Initialize this guy.
-        void InitProcessing(const ClipEntry * clipEntry);
+        void InitProcessing(ClipEntry * clipEntry);
 
         /// Finalize the process.
         void FinishProcessing();
@@ -187,11 +220,8 @@ namespace SmartVideo
             frameWeights[iFrame] = weight;
         }
 
-        /// Process a video.
-        void ProcessVideo(const ClipEntry& clipEntry);
-
         /// Process a stream that is represented by a sequence of images.
-        void ProcessImages(const ClipEntry& clipEntry);
+        void ProcessClip(ClipEntry& clipEntry);
     };
 }
 

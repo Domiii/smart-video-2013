@@ -2,7 +2,8 @@
 	"cafe-1" : {
 		"type" : "vid",
 		"startFrame" : 0,
-		"location" : "a.mp4"
+		"baseDir" : "",
+		"frameFile" : "a.mp4",
 		"weightFile" : "cafe1-weights"
 	},
 	"pedestrian" : {

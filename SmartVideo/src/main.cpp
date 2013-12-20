@@ -27,7 +27,8 @@ int main(int argc, char* argv[])
     // some processor-specific things
     Config.ProgressBarLen = 50;
     Config.MaxIOQueueSize = 50;
-    Config.NReadThreads = 8;
+    //Config.NReadThreads = 8;
+    Config.NReadThreads = 1;
 
     if (!Config.InitializeConfig() || Config.ClipEntries.size() == 0)
     {
@@ -44,15 +45,14 @@ int main(int argc, char* argv[])
     for (auto clip : Config.ClipEntries)
     {
         // process image sequence
-        Processor->ProcessImages(clip);
+        Processor->ProcessClip(clip);
     }
 
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now - start ).count();
     cout << "Processing (with " << Config.NReadThreads << " read threads) took: " << millis/1000.f << " s." << endl << endl;
 
-    cout << "Press ENTER to exit." << endl;
-    cin.get();
+    cout << "Press ENTER to exit." << endl; cin.get();
 
 	return EXIT_SUCCESS;
 }

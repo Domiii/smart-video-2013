@@ -30,6 +30,30 @@ namespace Util
 {
     typedef unsigned int uint32;
 
+    
+    // ###################################################################################################
+    // String util
+
+    /// Convert number (or other convertible type) to String
+    template <typename T>
+    std::string ToString ( T obj )
+    {
+        std::ostringstream ss;
+        ss << obj;
+        return ss.str();
+    }
+
+    
+    /// Convert string to number (or other convertible type)
+    template <typename T>
+    T StringToObj ( const std::string &str )
+    {
+        std::istringstream ss(str);
+        T result;
+        return ss >> result ? result : 0;
+    }
+
+
     /// Trim from start.
     static inline std::string &ltrim(std::string &s) 
     {
@@ -50,6 +74,10 @@ namespace Util
     {
         return ltrim(rtrim(s));
     }
+
+    
+    // ###################################################################################################
+    // File util
 
     /// Reads all lines from the given file and stores them in the returned vector.
     inline std::string ReadText(std::string fname)
@@ -94,6 +122,7 @@ namespace Util
         in.seekg(0, std::ifstream::end);
         return in.tellg(); 
     }
+
 }
 
 #endif // UTIL_UTIL_H

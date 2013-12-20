@@ -28,7 +28,7 @@ namespace SmartVideo
         DisplayFrames = JSonGetProperty(cfgRoot, "displayResults")->int_value != 0;
         LearningRate = JSonGetProperty(cfgRoot, "learningRate")->float_value;
         CachedImageType = JSonGetProperty(cfgRoot, "cachedImageType")->GetStringValue();
-        UseCachedForForeground = (bool)JSonGetProperty(cfgRoot, "useCachedForForeground")->int_value;
+        UseCachedForForeground = JSonGetProperty(cfgRoot, "useCachedForForeground")->int_value > 0;
 
         std::string clipListPath(GetClipListPath());
         json_value * clipRoot = JSonReadFile(clipListPath);
@@ -42,11 +42,30 @@ namespace SmartVideo
             ClipEntry& entry = ClipEntries[i++];
             json_value * entryNode = x.second;
             entry.Name = entryNode->name;
+            entry.Type = JSonGetProperty(entryNode, "type")->GetStringValue() == "img" ? ClipType::ImageSequence : ClipType::Video;
             entry.BaseFolder = JSonGetProperty(entryNode, "baseDir")->GetStringValue();
             entry.ClipFile = JSonGetProperty(entryNode, "frameFile")->GetStringValue();
             entry.WeightFile = JSonGetProperty(entryNode, "weightFile")->GetStringValue();
             entry.StartFrame = JSonGetProperty(entryNode, "startFrame")->int_value;
-            entry.Filenames = ReadLines(GetFrameFilePath(entry));
+
+
+            if (entry.Type == ClipType::ImageSequence)
+            {
+                entry.Filenames = ReadLines(GetFrameFilePath(entry));
+            }
+            else
+            {
+                auto fname = GetVideoFile(entry);
+                entry.Video = std::move(VideoCapture(fname));
+
+                if(!entry.Video.isOpened())
+                {
+                    //error in opening the video input
+                    cerr << "Unable to open video file: " << fname << endl;
+                    exit(EXIT_FAILURE);
+                }
+                entry.Video.set(CV_CAP_PROP_POS_FRAMES, entry.StartFrame);
+            }
         }
 
         // TODO: Properly delete the JSon nodes.
@@ -56,7 +75,7 @@ namespace SmartVideo
 
 
     /// The class that does the "SmartVideo" processing.
-    void SmartVideoProcessor::InitProcessing(const ClipEntry* clipEntry)
+    void SmartVideoProcessor::InitProcessing(ClipEntry* clipEntry)
     {
         this->clipEntry = clipEntry;
 
@@ -121,8 +140,15 @@ namespace SmartVideo
     void SmartVideoProcessor::FinishProcessing()
     {
         cout << endl;
+        if (clipEntry->Video.isOpened())
+        {
+            // delete capture object
+            clipEntry->Video.release();
+        }
+
         if (clipEntry->WeightFile.size() > 0)
         {
+            // write weight file
             WriteLines(Config.GetWeightsPath(*clipEntry), frameWeights);
             cout << "Done.";
         }
@@ -136,46 +162,18 @@ namespace SmartVideo
     }
 
 
-    /// Process video.
-    void SmartVideoProcessor::ProcessVideo(const ClipEntry& clipEntry)
-    {
-         InitProcessing(&clipEntry);
-        // TODO: Video support
-
-        ////create the capture object
-        //VideoCapture capture(videoFilename);
-        //if(!capture.isOpened()){
-        //    //error in opening the video input
-        //    cerr << "Unable to open video file: " << videoFilename << endl;
-        //    exit(EXIT_FAILURE);
-        //}
-
-        //// read input data until EOF
-        //while(capture.read(frame)){
-        //    ProcessInputFrame();
-        //}
-
-        //// delete capture object
-        //capture.release();
-
-        FinishProcessing();
-    }
-
-
     /// Process sequence of images.
-    void SmartVideoProcessor::ProcessImages(const ClipEntry& clipEntry) 
+    void SmartVideoProcessor::ProcessClip(ClipEntry& clipEntry) 
     {
         // initialize
         InitProcessing(&clipEntry);
 
         // iterate over all files:
-        iNextProcessFrame = clipEntry.StartFrame;
-        for_each(clipEntry.Filenames.begin() + iNextProcessFrame, clipEntry.Filenames.end(), [&](const string& fname) {
+        for (iNextProcessFrame = clipEntry.StartFrame; iNextProcessFrame < clipEntry.GetFrameCount(); ++iNextProcessFrame)
+        {
             // process image
             ProcessNextFrame();
-
-            ++iNextProcessFrame;
-        });
+        }
 
         // finalize the process
         FinishProcessing();
@@ -252,20 +250,24 @@ namespace SmartVideo
 
             //show the current frame and the fg mask
             imshow("Frame", info.Frame);
-            imshow("Foreground", info.FrameForegroundMask);
+            //imshow("Foreground", info.FrameFoegroundMask);
 
-            waitKey(10);        // TODO: Add a way to better control FPS
+            waitKey(12);        // TODO: Add a way to better control FPS
         }
 
         // Dump the foreground information
         std::string outfile = Config.GetForegroundFolder() + "/" + info.FrameName + "." + Config.CachedImageType;  // save as CachedImageType
-        try {
+        try 
+        {
             MkDir(Config.GetForegroundFolder());        // make sure that folder exists
             bool saved = imwrite(outfile, info.FrameForegroundMask);
-            if (!saved) {
+            if (!saved) 
+            {
                 cerr << "Unable to save " << outfile << endl;
             }
-        } catch (runtime_error& ex) {
+        } 
+        catch (runtime_error& ex) 
+        {
             cerr << "Exception dumping foreground image in ." << Config.CachedImageType << " format: " << ex.what() << endl;
             exit(0);
         }
@@ -278,7 +280,8 @@ namespace SmartVideo
 
         iFrame += clipEntry->StartFrame;
         
-        if (iFrame >= clipEntry->GetFrameCount())
+        auto nFrameCount = clipEntry->GetFrameCount();
+        if (iFrame >= nFrameCount)
         {
             return false;
         }
@@ -289,21 +292,35 @@ namespace SmartVideo
             this_thread::sleep_for(chrono::milliseconds(1));
             return true;
         }
+        
 
-        string folder = Config.GetClipFolder(*clipEntry);
-        auto fname = *(clipEntry->Filenames.begin() + iFrame);
-        string fpath = folder + "/" + fname;
-
-        // read image file
         FrameInfo frameInfo(iFrame);
-        frameInfo.FrameName = fname;
-        frameInfo.Frame = imread(fpath);
-        if(!frameInfo.Frame.data)
+        frameInfo.FrameName = ToString(iFrame);
+        if (clipEntry->Type == ClipType::Video)
         {
-            // error in opening an image file
-            cerr << "Unable to open image frame: " << fpath << endl;
-            exit(EXIT_FAILURE);
-        } 
+            // read frame from video
+            if (!clipEntry->Video.read(frameInfo.Frame) || frameInfo.Frame.total() == 0)
+            {
+                cerr << "ERROR: Unable to read next frame (#" << frameInfo.FrameIndex << ") from video." << endl;
+                cout << "Press ENTER to exit." << endl; cin.get();
+                exit(EXIT_FAILURE);
+            }
+        }
+        else
+        {
+            // read frame from image
+            string folder = Config.GetClipFolder(*clipEntry);
+            auto fname = *(clipEntry->Filenames.begin() + iFrame);
+            string fpath = folder + "/" + fname;
+
+            frameInfo.Frame = imread(fpath);
+            if(!frameInfo.Frame.data)
+            {
+                // error in opening an image file
+                cerr << "Unable to open image frame: " << fpath << endl;
+                exit(EXIT_FAILURE);
+            } 
+        }
 
         // add image to queue
         frameInBuffer.Push(frameInfo);
