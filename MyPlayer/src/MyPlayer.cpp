@@ -207,10 +207,15 @@ namespace mp{
 		nowFrame.release();
 		nowFrameNumber = index;
 
+
+		/*
 		string framePath;
 		framePath = frameName[index];
 		cout << framePath << endl;
 		nowFrame = imread(framePath, CV_LOAD_IMAGE_COLOR);
+		*/
+		nowFrame = imgProcessing(index);
+
 		imshow("Display", nowFrame);
 		
 		CvPoint FromPoint,ToPoint;
@@ -256,6 +261,25 @@ namespace mp{
 		else{
 			cout << "the last frame" << endl;
 		}
+	}
+
+	cv::Mat Player::imgProcessing(int index){
+		string framePath;
+		framePath = frameName[index];
+		cout << framePath << endl;
+		Mat frame = imread(framePath, CV_LOAD_IMAGE_COLOR);
+
+		/*
+		for(int i=0; i<frame.rows; i++){
+			for(int j=0; j<frame.cols; j++){
+				frame.at<Vec3b>(i,j)[0] = 255;
+				frame.at<Vec3b>(i,j)[1] = 255;
+				frame.at<Vec3b>(i,j)[2] = 255;
+			}
+		}
+		*/
+
+		return frame;
 	}
 
 	void Player::loop(){

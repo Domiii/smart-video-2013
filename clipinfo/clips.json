@@ -1,13 +1,15 @@
 {
 	"pedestrian" : {
-		"fps" : 26,
+		"type" : "img",
 		"startFrame" : 290,
+		"fps" : 26,
 		"baseDir" : "dataset/baseline/pedestrians/input",
 		"frameFile" : "pedestrians.txt",
 		"weightFile" : "weight",
 		"sequenceFile" : "play_sequence"
 	},
 	"road" : {
+		"type" : "img",
 		"fps" : 26,
 		"startFrame" : 5,
 		"baseDir" : "SABS/Test/Basic",

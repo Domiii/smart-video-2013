@@ -9,5 +9,12 @@
 
 	"cachedImageType" : "bmp",
 	"useCachedForForeground" : true
+    "fgDir" : "cached/foreground",
+
+    "learningRate" : 0.05,
+    "displayResults" : false,
+
+    "cachedImageType" : "bmp",
+    "useCachedForForeground" : true
 
 }

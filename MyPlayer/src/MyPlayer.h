@@ -103,6 +103,7 @@ namespace mp{
 		void startPlayFrame();
 		void nextSequence();
 		void nextFrame();
+		cv::Mat imgProcessing(int index);
 		void loop();
 		void endPlayer();
 	};

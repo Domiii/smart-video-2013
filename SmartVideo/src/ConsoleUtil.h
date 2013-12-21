@@ -50,7 +50,7 @@ namespace Util
 
         /// Sets the new current value for this progress bar. 
         /// Re-draws bar if number of bars have changed.
-        void UpdateProgress(int nNewValue)
+        void UpdateProgress(int nNewValue, std::string statusString = "")
         {   
             // draw progress to console
             std::string frameNumberString = std::to_string(nNewValue) + " / " + std::to_string(nMax);
@@ -73,16 +73,17 @@ namespace Util
                 }
                 progressString += '|';
             
-                std::cout << '\r' << progressString << std::setw(15) << frameNumberString << " (" << std::setprecision(3) << (100 * progress) << "%)   ";
+                std::cout << '\r' << progressString << " " << std::setw(8) << frameNumberString << " (" << std::setprecision(3) << std::showpoint << (100 * progress) << "%)   ";
+                std::cout << std::left << std::setw(80) << statusString;
                 std::cout.flush();
             }
 
             // update value
             nValue = nNewValue;
 
-            // update speed
-            std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-            auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(lastUpdateTime - now).count();
+            // TODO: update speed
+            /*std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+            auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(lastUpdateTime - now).count();*/
             
         }
     };
