@@ -34,6 +34,7 @@ namespace mp{
         if (!cfgRoot) return false;
 		
         DataFolder = JSonGetProperty(cfgRoot, "dataDir")->GetStringValue();
+		FgFolder = JSonGetProperty(cfgRoot, "maskDir")->GetStringValue();
         ClipinfoDir = JSonGetProperty(cfgRoot, "clipDir")->GetStringValue();
         ClipListFile = JSonGetProperty(cfgRoot, "clipFile")->GetStringValue();
 		
@@ -42,6 +43,7 @@ namespace mp{
         if (!clipRoot) return false;
 
         ClipEntries.resize(clipRoot->children.size());
+
 
         int i = 0;
         for (auto&  x : clipRoot->children)
@@ -54,7 +56,10 @@ namespace mp{
             entry.WeightFile = JSonGetProperty(entryNode, "weightFile")->GetStringValue();
 			entry.SequenceFile = JSonGetProperty(entryNode, "sequenceFile")->GetStringValue();
             entry.StartFrame = JSonGetProperty(entryNode, "startFrame")->int_value;
+			entry.MaskBaseFolder = JSonGetProperty(entryNode, "maskBaseDir")->GetStringValue();
+			entry.MaskFile = JSonGetProperty(entryNode, "maskFile")->GetStringValue();
             entry.Filenames = ReadLines(GetFrameFilePath(entry));
+			entry.Masknames = ReadLines(GetMaskFilePath(entry));
         }
 		
         return true;
@@ -64,6 +69,7 @@ namespace mp{
 
 		cout << "display " << clipEntry.Name << " ..." << endl;
 		cout << "frameNumber: " << clipEntry.GetFrameCount() << endl;
+		cout << "maskNumber: " << clipEntry.GetMaskCount() << endl;
 		cout << "weightPath: " << Config.GetWeightsPath(clipEntry) << endl;
 		cout << "sequencePath: " << Config.GetSequencePath(clipEntry) << endl;
 		
@@ -108,12 +114,20 @@ namespace mp{
 			frameName.push_back(fpath);
             iFrameNumber++;
         });
+
+		folder = Config.GetMaskFolder(clipEntry);
+		iFrameNumber = 0;
+        for_each(clipEntry.Masknames.begin() + iFrameNumber, clipEntry.Masknames.end(), [&](const string& fname) {
+            // read image file
+            string fpath = folder + "/" + fname;
+			maskName.push_back(fpath);
+            iFrameNumber++;
+        });
 		
 	}
 
 	void Player::initSequence(){
 		FILE *fp;
-		cout << "sequencePath: "  <<sequencePath.c_str() << endl;
 		fp = fopen(sequencePath.c_str(),"r");
 		int tmps;
 		while(fscanf(fp,"%d",&tmps)!=EOF){
@@ -265,19 +279,23 @@ namespace mp{
 
 	cv::Mat Player::imgProcessing(int index){
 		string framePath;
+		string maskPath;
 		framePath = frameName[index];
+		maskPath = maskName[index];
 		cout << framePath << endl;
+		cout << maskPath << endl;
 		Mat frame = imread(framePath, CV_LOAD_IMAGE_COLOR);
+		Mat mask = imread(maskPath, CV_LOAD_IMAGE_COLOR);
 
-		/*
 		for(int i=0; i<frame.rows; i++){
 			for(int j=0; j<frame.cols; j++){
-				frame.at<Vec3b>(i,j)[0] = 255;
-				frame.at<Vec3b>(i,j)[1] = 255;
-				frame.at<Vec3b>(i,j)[2] = 255;
+				if(mask.at<Vec3b>(i,j)[0]!=0 || mask.at<Vec3b>(i,j)[1]!=0 || mask.at<Vec3b>(i,j)[2]!=0){
+					frame.at<Vec3b>(i,j)[0] = mask.at<Vec3b>(i,j)[0]!=0;
+					frame.at<Vec3b>(i,j)[1] = mask.at<Vec3b>(i,j)[0]!=0;
+					frame.at<Vec3b>(i,j)[2] = mask.at<Vec3b>(i,j)[0]!=0;
+				}
 			}
 		}
-		*/
 
 		return frame;
 	}
@@ -300,6 +318,7 @@ namespace mp{
 		destroyWindow("Display");
 		destroyWindow("Weight");
 		frameName.clear();
+		maskName.clear();
 		s.clear();
 		w.clear();
 	}

@@ -13,9 +13,13 @@ namespace mp{
         std::string ClipFile;
         std::string WeightFile;
 		std::string SequenceFile;
+		std::string MaskBaseFolder;
+		std::string MaskFile;
         std::vector<std::string> Filenames;
+		std::vector<std::string> Masknames;
 
         size_t GetFrameCount() const { return Filenames.size(); }
+		size_t GetMaskCount() const { return Masknames.size(); }
     };
 
 	struct PlayerConfig
@@ -24,6 +28,7 @@ namespace mp{
         std::string CfgFile;
 
         std::string DataFolder;
+		std::string FgFolder;
         std::string ClipinfoDir;
         std::string ClipListFile;
 
@@ -53,10 +58,22 @@ namespace mp{
             return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.ClipFile;
         }
 
+		/// Get the path to the file containing all frame masknames.
+        std::string GetMaskFilePath(const ClipEntry& clipEntry) const
+        {
+            return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.MaskFile;
+        }
+
         /// Get the folder containing the files containing the given clip's frames
         std::string GetClipFolder(const ClipEntry& clipEntry) const
         {
             return CfgFolder + "/" + DataFolder + "/" + clipEntry.BaseFolder;
+        }
+
+		/// Get the folder containing the files containing the given mask's frames
+        std::string GetMaskFolder(const ClipEntry& clipEntry) const
+        {
+            return CfgFolder + "/" + FgFolder + "/" + clipEntry.MaskBaseFolder;
         }
 
         /// Read all config files
@@ -67,6 +84,7 @@ namespace mp{
 		const PlayerConfig Config;
 
 		std::vector<std::string> frameName;
+		std::vector<std::string> maskName;
 		int frameNumber;
 		int startFrameNumber;
 		int nowFrameNumber;

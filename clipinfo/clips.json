@@ -6,7 +6,9 @@
 		"baseDir" : "dataset/baseline/pedestrians/input",
 		"frameFile" : "pedestrians.txt",
 		"weightFile" : "weight",
-		"sequenceFile" : "play_sequence"
+		"sequenceFile" : "play_sequence",
+		"maskFile" : "pedestrians2.txt",
+		"maskBaseDir" : "in"
 	},
 	"road" : {
 		"type" : "img",
@@ -15,6 +17,8 @@
 		"baseDir" : "SABS/Test/Basic",
 		"frameFile" : "basic.txt",
 		"weightFile" : "weight",
-		"sequenceFile" : "play_sequence"
+		"sequenceFile" : "play_sequence",
+		"maskFile" : "basic2.txt",
+		"maskBaseDir" : "basic"
 	}
 }

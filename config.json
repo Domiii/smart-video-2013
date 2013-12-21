@@ -3,6 +3,7 @@
 	"clipDir" : "clipinfo",
 	"clipFile" : "clips.json",
 	"fgDir" : "cached/foreground",
+	"maskDir" : "clipinfo/cached/foreground",
 
 	"learningRate" : 0.05,
 	"displayResults" : false,
