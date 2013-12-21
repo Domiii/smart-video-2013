@@ -2,12 +2,12 @@
 	"dataDir" : "../data",
 	"clipDir" : "clipinfo",
 	"clipFile" : "clips.json",
-   "fgDir" : "cached/foreground",
+	"fgDir" : "cached/foreground",
 
-   "learningRate" : 0.05,
-   "displayResults" : false,
+	"learningRate" : 0.05,
+	"displayResults" : false,
 
-   "cachedImageType" : "bmp",
-   "useCachedForForeground" : true
+	"cachedImageType" : "bmp",
+	"useCachedForForeground" : true
 
 }
