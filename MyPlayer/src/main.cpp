@@ -11,7 +11,7 @@ std::unique_ptr<Player> p;
 
 int main(int argc, char* argv[])
 {
-	
+
 	Config.CfgFolder = "..";
     Config.CfgFile = "config.json";
 
