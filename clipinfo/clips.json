@@ -1,39 +1,44 @@
 {
-	"cafe-1" : {
+	"pedestrian" : {
+			"type" : "img",
+			"startFrame" : 0,
+			"fps" : 26,
+			"baseDir" : "dataset/baseline/pedestrians/input",
+			"frameFile" : "pedestrians.txt",
+			"weightFile" : "pedestrians-weights",
+			"sequenceFile" : "pedestrian-sequence"
+	}
+	,"cafe-1" : {
 			"type" : "vid",
 			"startFrame" : 0,
 			"baseDir" : "skywatch",
 			"frameFile" : "a.mp4",
-			"weightFile" : "cafe1-weights"
+			"weightFile" : "cafe1-weights",
+			"sequenceFile" : "cafe1-sequence"
 	},
 	"cafe-2" : {
 			"type" : "vid",
 			"startFrame" : 0,
 			"baseDir" : "skywatch",
 			"frameFile" : "b.mp4",
-			"weightFile" : "cafe2-weights"
+			"weightFile" : "cafe2-weights",
+			"sequenceFile" : "cafe2-sequence"
 	},
 	"cafe-3" : {
 			"type" : "vid",
 			"startFrame" : 0,
 			"baseDir" : "skywatch",
 			"frameFile" : "c.mp4",
-			"weightFile" : "cafe3-weights"
-	},
-	"pedestrian" : {
-			"type" : "img",
-			"startFrame" : 290,
-			"fps" : 26,
-			"baseDir" : "dataset/baseline/pedestrians/input",
-			"frameFile" : "pedestrians.txt",
-			"weightFile" : "pedestrians-weights"
+			"weightFile" : "cafe3-weights",
+			"sequenceFile" : "cafe3-sequence"
 	},
 	"road" : {
 			"type" : "img",
-			"startFrame" : 5,
+			"startFrame" : 0,
 			"fps" : 26,
 			"baseDir" : "SABS/Test/Basic/",
 			"frameFile" : "basic.txt",
-			"weightFile" : "basic-weights"
+			"weightFile" : "basic-weights",
+			"sequenceFile" : "basic-sequence"
 	}
 }

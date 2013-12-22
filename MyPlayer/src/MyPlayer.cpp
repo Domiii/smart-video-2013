@@ -40,8 +40,7 @@ namespace mp{
 	void Player::initPlayer(ClipEntry& clipEntry)
     {
 		this->clipEntry = &clipEntry;
-        clipMaskFileNames = ReadLines(Config.GetForegroundFrameFile(clipEntry));
-		cout << Config.GetForegroundFrameFile(clipEntry) << endl;
+        clipMaskFileNames = ReadLines(Config.GetForegroundFolder(clipEntry));
 
 		frameNumber = clipEntry.GetFrameCount();
 		cout << "frameNumber: " << frameNumber << endl;
@@ -52,9 +51,9 @@ namespace mp{
 
 		weightPath = Config.GetWeightsPath(clipEntry);
 		weightW = 1000;
-		weightH = 100;
+		weightH = 200;
 
-		sequencePath = "../clipinfo/play_sequence";
+		sequencePath = Config.GetSequencePath(clipEntry);
 		initWeight();
 		initSequence();
 
@@ -119,7 +118,7 @@ namespace mp{
 		if(frameNumber<1000){
 			for(int i=0; i<frameNumber; i++){
 				FromPoint = cvPoint(i,weightH);
-				ToPoint = cvPoint(i,weightH-(int)(w[i]*100));
+				ToPoint = cvPoint(i,weightH-(int)(weightH*w[i]/10000));
 				cvLine(imgWeight,FromPoint,ToPoint,Color,Thickness,4,Shift);
 			}
 		}
@@ -128,7 +127,7 @@ namespace mp{
 				double ratio = (double)i/1000*(double)frameNumber;
 				int index = (int)ratio;
 				FromPoint = cvPoint(i,weightH);
-				ToPoint = cvPoint(i,weightH-(int)(w[index]*100));
+				ToPoint = cvPoint(i,weightH-(int)(weightH*w[index]/10000));
 				cvLine(imgWeight,FromPoint,ToPoint,Color,Thickness,4,Shift);
 			}
 		}
@@ -180,7 +179,6 @@ namespace mp{
 	void Player::showFrame(int index){
 		nowFrame.release();
 		nowFrameNumber = index;
-
 
 		/*
 		string framePath;

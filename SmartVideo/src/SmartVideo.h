@@ -39,6 +39,8 @@ namespace SmartVideo
         std::string BaseFolder;
         std::string WeightFile;
 
+		std::string SequenceFile;
+
         /// If Type == Video, this is the video file name, else it is the list of images in the sequence
         std::string ClipFile;
 
@@ -110,6 +112,12 @@ namespace SmartVideo
         std::string GetWeightsPath(const ClipEntry& clipEntry) const
         {
             return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.WeightFile;
+        }
+
+		/// Get the path to the file containing all sequence.
+        std::string GetSequencePath(const ClipEntry& clipEntry) const
+        {
+			return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.SequenceFile;
         }
 
         std::string GetPlaybackPath(const ClipEntry& clipEntry) const {

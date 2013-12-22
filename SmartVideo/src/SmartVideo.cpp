@@ -52,6 +52,7 @@ namespace SmartVideo
             entry.BaseFolder = JSonGetProperty(entryNode, "baseDir")->GetStringValue();
             entry.ClipFile = JSonGetProperty(entryNode, "frameFile")->GetStringValue();
             entry.WeightFile = JSonGetProperty(entryNode, "weightFile")->GetStringValue();
+			entry.SequenceFile = JSonGetProperty(entryNode, "sequenceFile")->GetStringValue();
             entry.StartFrame = JSonGetProperty(entryNode, "startFrame")->int_value;
 
 
