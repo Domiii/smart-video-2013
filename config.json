@@ -4,7 +4,7 @@
    "clipFile" : "clips.json",
 
    "learningRate" : 0.05,
-   "displayResults" : true,
+   "displayResults" : false,
 
    "fgDir" : "cached/foreground",
    "maskDir" : "clipinfo/cached/foreground",

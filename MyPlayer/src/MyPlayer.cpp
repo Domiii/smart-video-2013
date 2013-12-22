@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include "FileUtil.h"
 
 
 using namespace std;
@@ -67,21 +68,21 @@ namespace mp{
 	}
 
 	void Player::initSequence(){
-		FILE *fp;
+		/*FILE *fp;
 		fp = fopen(sequencePath.c_str(),"r");
         if (!fp)
         {
             cerr << "ERROR: Could not open file " << sequencePath << endl ;
-            cout << "Press ENTER to exit." << endl; cin.get();
+            cerr << "Press ENTER to exit." << endl; cin.get();
             exit(EXIT_FAILURE);
-        }
+        }*/
 
-		int tmps;
+		/*int tmps;
 		while(fscanf(fp,"%d",&tmps)!=EOF){
 			s.push_back(tmps);
 		}
 		sequenceNumber = (int)s.size();
-		cout << "sequenceNumber: " << sequenceNumber << endl;
+		cout << "sequenceNumber: " << sequenceNumber << endl;*/
 	}
 
 
@@ -91,8 +92,8 @@ namespace mp{
 		fp = fopen(weightPath.c_str(),"r");
         if (!fp)
         {
-            cerr << "ERROR: Could not open file " << sequencePath << endl ;
-            cout << "Press ENTER to exit." << endl; cin.get();
+            cerr << "ERROR: Could not open file " << weightPath << endl ;
+            cerr << "Press ENTER to exit." << endl; cin.get();
             exit(EXIT_FAILURE);
         }
 
@@ -240,7 +241,7 @@ namespace mp{
             if (!clipEntry->Video.read(frame) || frame.total() == 0)
             {
                 cerr << "ERROR: Unable to read next frame (#" << iFrame << ") from video." << endl;
-                cout << "Press ENTER to exit." << endl; cin.get();
+                cerr << "Press ENTER to exit." << endl; cin.get();
                 exit(EXIT_FAILURE);
             }
         }
@@ -258,6 +259,7 @@ namespace mp{
             {
                 // error in opening an image file
                 cerr << "Unable to open image frame: " << fpath << endl;
+                cerr << "Press ENTER to exit." << endl; cin.get();
                 exit(EXIT_FAILURE);
             } 
         }

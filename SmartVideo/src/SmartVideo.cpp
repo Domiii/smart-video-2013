@@ -62,6 +62,7 @@ namespace SmartVideo
                 {
                     //error in opening the video input
                     cerr << "Unable to open video file: " << fname << endl;
+                    cerr << "Press ENTER to exit." << endl; cin.get();
                     exit(EXIT_FAILURE);
                 }
                 entry.Video.set(CV_CAP_PROP_POS_FRAMES, entry.StartFrame);
@@ -479,10 +480,10 @@ namespace SmartVideo
         }
 
         // Dump the foreground information
-        std::string outfile = Config.GetForegroundFolder() + "/" + info.FrameName + "." + Config.CachedImageType;  // save as CachedImageType
+        std::string outfile = Config.GetForegroundFolder(*clipEntry) + "/" + info.FrameName + "." + Config.CachedImageType;  // save as CachedImageType
         try 
         {
-            MkDir(Config.GetForegroundFolder());        // make sure that folder exists
+            MkDir(Config.GetForegroundFolder(*clipEntry));        // make sure that folder exists
             bool saved = imwrite(outfile, info.FrameForegroundMask);
             if (!saved) 
             {
@@ -492,7 +493,8 @@ namespace SmartVideo
         catch (runtime_error& ex) 
         {
             cerr << "Exception dumping foreground image in ." << Config.CachedImageType << " format: " << ex.what() << endl;
-            exit(0);
+            cerr << "Press ENTER to exit." << endl; cin.get();
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -525,7 +527,7 @@ namespace SmartVideo
             if (!clipEntry->Video.read(frameInfo.Frame) || frameInfo.Frame.total() == 0)
             {
                 cerr << "ERROR: Unable to read next frame (#" << frameInfo.FrameIndex << ") from video." << endl;
-                cout << "Press ENTER to exit." << endl; cin.get();
+                cerr << "Press ENTER to exit." << endl; cin.get();
                 exit(EXIT_FAILURE);
             }
         }
@@ -541,6 +543,7 @@ namespace SmartVideo
             {
                 // error in opening an image file
                 cerr << "Unable to open image frame: " << fpath << endl;
+                cerr << "Press ENTER to exit." << endl; cin.get();
                 exit(EXIT_FAILURE);
             } 
         }

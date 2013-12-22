@@ -9,9 +9,42 @@
     <ClCompile Include="..\SmartVideo\src\SmartVideo.cpp">
       <Filter>SmartVideo</Filter>
     </ClCompile>
+    <ClCompile Include="..\SmartVideo\src\agglomerative.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SmartVideo\src\hungarian.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SmartVideo\src\main.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SmartVideo\src\matcher.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SmartVideo\src\objectProfile.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SmartVideo\src\workers.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\MyPlayer.h" />
+    <ClInclude Include="..\SmartVideo\src\ConsoleUtil.h">
+      <Filter>SmartVideo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SmartVideo\src\FileUtil.h">
+      <Filter>SmartVideo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SmartVideo\src\JSonUtil.h">
+      <Filter>SmartVideo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SmartVideo\src\ThreadUtil.h">
+      <Filter>SmartVideo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SmartVideo\src\util.h">
+      <Filter>SmartVideo</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="SmartVideo">
