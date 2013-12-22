@@ -127,7 +127,7 @@ namespace SmartVideo
         /// Get the folder containing the cahced foreground datas
         std::string GetForegroundFolder(const ClipEntry& clipEntry) const
         {
-            return CfgFolder + "/" + DataFolder + "/" + clipEntry.BaseFolder + "/" + ForegroundDir;
+            return CfgFolder + "/" + DataFolder + "/" + ForegroundDir + "/" + clipEntry.Name;
         }
 
         /// Get the folder containing the cahced foreground datas

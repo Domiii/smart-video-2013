@@ -2,21 +2,21 @@
 	"cafe-1" : {
 			"type" : "vid",
 			"startFrame" : 0,
-			"baseDir" : "",
+			"baseDir" : "skywatch",
 			"frameFile" : "a.mp4",
 			"weightFile" : "cafe1-weights"
 	},
 	"cafe-2" : {
 			"type" : "vid",
 			"startFrame" : 0,
-			"baseDir" : "",
+			"baseDir" : "skywatch",
 			"frameFile" : "b.mp4",
 			"weightFile" : "cafe2-weights"
 	},
 	"cafe-3" : {
 			"type" : "vid",
 			"startFrame" : 0,
-			"baseDir" : "",
+			"baseDir" : "skywatch",
 			"frameFile" : "c.mp4",
 			"weightFile" : "cafe3-weights"
 	},

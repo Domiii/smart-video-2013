@@ -479,10 +479,10 @@ namespace SmartVideo
         }
 
         // Dump the foreground information
-        std::string outfile = Config.GetForegroundFolder() + "/" + info.FrameName + "." + Config.CachedImageType;  // save as CachedImageType
+        std::string outfile = Config.GetForegroundFolder(*clipEntry) + "/" + info.FrameName + "." + Config.CachedImageType;  // save as CachedImageType
         try 
         {
-            MkDir(Config.GetForegroundFolder());        // make sure that folder exists
+            MkDir(Config.GetForegroundFolder(*clipEntry));        // make sure that folder exists
             bool saved = imwrite(outfile, info.FrameForegroundMask);
             if (!saved) 
             {
