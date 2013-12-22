@@ -66,24 +66,6 @@
     <ClInclude Include="src\FileUtil.h">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="src\kdtree++\allocator.hpp">
-      <Filter>kdtree++</Filter>
-    </ClInclude>
-    <ClInclude Include="src\kdtree++\function.hpp">
-      <Filter>kdtree++</Filter>
-    </ClInclude>
-    <ClInclude Include="src\kdtree++\iterator.hpp">
-      <Filter>kdtree++</Filter>
-    </ClInclude>
-    <ClInclude Include="src\kdtree++\kdtree.hpp">
-      <Filter>kdtree++</Filter>
-    </ClInclude>
-    <ClInclude Include="src\kdtree++\node.hpp">
-      <Filter>kdtree++</Filter>
-    </ClInclude>
-    <ClInclude Include="src\kdtree++\region.hpp">
-      <Filter>kdtree++</Filter>
-    </ClInclude>
     <ClInclude Include="src\objectProfile.h">
       <Filter>SmartVideo</Filter>
     </ClInclude>
@@ -95,6 +77,9 @@
     </ClInclude>
     <ClInclude Include="src\matcher.h">
       <Filter>SmartVideo</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ThreadUtil.h">
+      <Filter>Util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

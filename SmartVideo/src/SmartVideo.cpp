@@ -3,6 +3,7 @@
 #include <iomanip>
 
 #include "FileUtil.h"
+#include <functional>
 
 using namespace cv;
 using namespace std;
@@ -18,6 +19,8 @@ namespace SmartVideo
         json_value * cfgRoot = JSonReadFile(cfgPath);
         if (!cfgRoot) return false;
 
+        // TODO: Video files
+
         DataFolder = JSonGetProperty(cfgRoot, "dataDir")->GetStringValue();
         ClipinfoDir = JSonGetProperty(cfgRoot, "clipDir")->GetStringValue();
         ClipListFile = JSonGetProperty(cfgRoot, "clipFile")->GetStringValue();
@@ -25,7 +28,7 @@ namespace SmartVideo
         DisplayFrames = JSonGetProperty(cfgRoot, "displayResults")->int_value != 0;
         LearningRate = JSonGetProperty(cfgRoot, "learningRate")->float_value;
         CachedImageType = JSonGetProperty(cfgRoot, "cachedImageType")->GetStringValue();
-        UseCachedForForeground = (bool)JSonGetProperty(cfgRoot, "useCachedForForeground")->int_value;
+        UseCachedForForeground = JSonGetProperty(cfgRoot, "useCachedForForeground")->int_value > 0;
 
         std::string clipListPath(GetClipListPath());
         json_value * clipRoot = JSonReadFile(clipListPath);
@@ -39,11 +42,30 @@ namespace SmartVideo
             ClipEntry& entry = ClipEntries[i++];
             json_value * entryNode = x.second;
             entry.Name = entryNode->name;
+            entry.Type = JSonGetProperty(entryNode, "type")->GetStringValue() == "img" ? ClipType::ImageSequence : ClipType::Video;
             entry.BaseFolder = JSonGetProperty(entryNode, "baseDir")->GetStringValue();
             entry.ClipFile = JSonGetProperty(entryNode, "frameFile")->GetStringValue();
             entry.WeightFile = JSonGetProperty(entryNode, "weightFile")->GetStringValue();
             entry.StartFrame = JSonGetProperty(entryNode, "startFrame")->int_value;
-            entry.Filenames = ReadLines(GetFrameFilePath(entry));
+
+
+            if (entry.Type == ClipType::ImageSequence)
+            {
+                entry.Filenames = ReadLines(GetFrameFilePath(entry));
+            }
+            else
+            {
+                auto fname = GetVideoFile(entry);
+                entry.Video = std::move(VideoCapture(fname));
+
+                if(!entry.Video.isOpened())
+                {
+                    //error in opening the video input
+                    cerr << "Unable to open video file: " << fname << endl;
+                    exit(EXIT_FAILURE);
+                }
+                entry.Video.set(CV_CAP_PROP_POS_FRAMES, entry.StartFrame);
+            }
         }
 
         // TODO: Properly delete the JSon nodes.
@@ -53,11 +75,20 @@ namespace SmartVideo
 
 
     /// The class that does the "SmartVideo" processing.
-    void SmartVideoProcessor::InitProcessing(const ClipEntry* clipEntry)
+    void SmartVideoProcessor::InitProcessing(ClipEntry* clipEntry)
     {
         this->clipEntry = clipEntry;
+
+        // wait for previous I/O operations to stop
+        ioPool.Stop();
+        ioPool.Join();
+
         pMOG = unique_ptr<BackgroundSubtractorMOG>(new BackgroundSubtractorMOG()); //MOG approach
-        iFrameNumber = 0;
+        frameInBuffer.Clear();
+        frameOutBuffer.Clear();
+
+        // initialize object tracking variables
+        InitObjectTracking();
 
         // allocate frame weights
         frameWeights.resize(clipEntry->GetFrameCount());
@@ -65,10 +96,14 @@ namespace SmartVideo
         {
             // create GUI windows (for debugging purposes)
             namedWindow("Frame");
-            namedWindow("Foreground");
+            namedWindow("Object");
+            //namedWindow("Foreground");
         }
 
         auto nTotalFrames = clipEntry->GetFrameCount() - 1;
+
+        // start I/O queue
+        ioPool.AddWorkers(Config.NReadThreads, std::bind(&SmartVideoProcessor::ReadNextInputFrame, this, std::placeholders::_1));
 
         cout << "Processing " << clipEntry->Name << "..." << endl;
 
@@ -76,35 +111,21 @@ namespace SmartVideo
     }
 
 
-    /// Processes the current frame.
-    void SmartVideoProcessor::ProcessInputFrame()
-    {
-        //update the background model
-        pMOG->operator()(frame, foregroundMask, Config.LearningRate);
-
-        // compute and set weight
-        SetWeight(iFrameNumber, ComputeFrameWeight(foregroundMask));
-
-        // draw progress
-        UpdateDisplay();
-    }
-
-
     /// Compute some measure of frame "importance".
-    float SmartVideoProcessor::ComputeFrameWeight(cv::Mat frame)
+    float SmartVideoProcessor::ComputeFrameWeight(FrameInfo& frameInfo)
     {
         uint32 nForegroundPixels  = 0;
 
         // count all foreground pixels
-        int cols = frame.cols, rows = frame.rows;
-        if (frame.isContinuous())
+        int cols = frameInfo.Frame.cols, rows = frameInfo.Frame.rows;
+        if (frameInfo.Frame.isContinuous())
         {
             cols *= rows;
             rows = 1;
         }
         for(int i = 0; i < rows; i++)
         {
-            auto Mi = frame.ptr<uchar>(i);
+            auto Mi = frameInfo.Frame.ptr<uchar>(i);
             for(int j = 0; j < cols; j++)
             {
                 auto value = Mi[j];
@@ -118,12 +139,20 @@ namespace SmartVideo
         return ratio;
     }
 
+
     /// Finalize processing.
     void SmartVideoProcessor::FinishProcessing()
     {
         cout << endl;
+        if (clipEntry->Video.isOpened())
+        {
+            // delete capture object
+            clipEntry->Video.release();
+        }
+
         if (clipEntry->WeightFile.size() > 0)
         {
+            // write weight file
             WriteLines(Config.GetWeightsPath(*clipEntry), frameWeights);
             cout << "Done.";
         }
@@ -136,75 +165,46 @@ namespace SmartVideo
         Cleanup();
     }
 
-
-
-    /// Process video.
-    void SmartVideoProcessor::ProcessVideo(const ClipEntry& clipEntry)
-    {
-        InitProcessing(&clipEntry);
-        // TODO: Video support
-
-        ////create the capture object
-        //VideoCapture capture(videoFilename);
-        //if(!capture.isOpened()){
-        //    //error in opening the video input
-        //    cerr << "Unable to open video file: " << videoFilename << endl;
-        //    exit(EXIT_FAILURE);
-        //}
-
-        //// read input data until EOF
-        //while(capture.read(frame)){
-        //    ProcessInputFrame();
-        //}
-
-        //// delete capture object
-        //capture.release();
-
-        FinishProcessing();
-    }
-
     /// Process sequence of images.
-    void SmartVideoProcessor::ProcessImages(const ClipEntry& clipEntry) 
+    void SmartVideoProcessor::ProcessClip(ClipEntry& clipEntry) 
     {
         // initialize
         cerr << "Initializing..." << endl;
         InitProcessing(&clipEntry);
 
-        // main stuffs
-        cerr << "BackgroundSubtraction..." << endl;
-        BackgroundSubtraction(clipEntry);
-        //cerr << "ObjectDetection..." << endl;
-        //ObjectDetection(clipEntry);
-        cerr << "ObjectTracking..." << endl;
-        ObjectTracking(clipEntry);
+        // iterate over all files:
+        for (iNextProcessFrame = clipEntry.StartFrame; iNextProcessFrame < clipEntry.GetFrameCount(); ++iNextProcessFrame)
+        {
+            // process image
+            ProcessNextFrame();
+        }
 
         // finalize the process
         FinishProcessing();
     }
 
-    void SmartVideoProcessor::BackgroundSubtraction(const ClipEntry& clipEntry) {
+
+    void SmartVideoProcessor::ProcessNextFrame()
+    {
+        // get next frame from queue
+        FrameInfo info = frameInBuffer.Pop();
+        
+        // main stuffs
+        BackgroundSubtraction(info);
+        ObjectTracking(info);
+
+        // compute and set weight
+        SetWeight(iNextProcessFrame, ComputeFrameWeight(info));
+
+        // draw progress
+        UpdateDisplay(info);
+    }
+
+
+    void SmartVideoProcessor::BackgroundSubtraction(FrameInfo& info) {
         if(!Config.UseCachedForForeground) {
-            string folder = Config.GetClipFolder(clipEntry);
-            // iterate over all files:
-            //iFrameNumber = clipEntry.StartFrame;
-            iFrameNumber = 0;
-            for_each(clipEntry.Filenames.begin() + iFrameNumber, clipEntry.Filenames.end(), [&](const string& fname) {
-                // read image file
-                string fpath = folder + "/" + fname;
-                frameName = fname;
-                frame = imread(fpath);
-                if(!frame.data)
-                {
-                    // error in opening an image file
-                    cerr << "Unable to open image frame: " << fpath << endl;
-                    exit(EXIT_FAILURE);
-                } 
-
-                // process image
-                ProcessInputFrame();
-
-                ++iFrameNumber;
-            });
+            //update the background model
+            pMOG->operator()(info.Frame, info.FrameForegroundMask, Config.LearningRate);
         }
     }
 
@@ -322,183 +322,245 @@ namespace SmartVideo
         return violateCnt <= violateLimit;
     }*/
 
-    void SmartVideoProcessor::ObjectTracking(const ClipEntry& clipEntry) {
-        // TODO
+    void SmartVideoProcessor::InitObjectTracking() {
+        prevObject.clear();
+        curObject.clear();
+    }
+    void SmartVideoProcessor::ObjectTracking(FrameInfo &frameInfo) {
         if(true/*!Config.UseCachedForObjectDetection*/) {
             cvflann::Logger::setLevel(cvflann::FLANN_LOG_INFO); // FIXME: remove later
 
-            string folder = Config.GetClipFolder(clipEntry);
+            //string folder = Config.GetClipFolder(clipEntry);
             // iterate over all files:
-            iFrameNumber = 0;
+            //iFrameNumber = 0;
             //iFrameNumber = clipEntry.StartFrame;
-            
-            int curCluster = 0;
-            vector<ObjectProfile> prevObject, curObject;
+            // read image file
+            /*string imgpath = folder + "/" + fname;
+            frameName = fname;
+            frame = imread(imgpath);
+            if(!frame.data)
+            {
+                // error in opening an image file
+                cerr << "Unable to open image frame: " << imgpath << endl;
+                exit(EXIT_FAILURE);
+            } 
 
-            for_each(clipEntry.Filenames.begin() + iFrameNumber, clipEntry.Filenames.end(), [&](const string& fname) {
-                // read image file
-                string imgpath = folder + "/" + fname;
-                frameName = fname;
-                frame = imread(imgpath);
-                if(!frame.data)
-                {
-                    // error in opening an image file
-                    cerr << "Unable to open image frame: " << imgpath << endl;
-                    exit(EXIT_FAILURE);
-                } 
+            // read foreground mask
+            string fgpath = Config.GetForegroundFolder() + "/" + frameName + "." + Config.CachedImageType;
+            Mat fgmask = imread(fgpath, CV_LOAD_IMAGE_GRAYSCALE);
+            if(!frame.data)
+            {
+                // error in opening an image file
+                cerr << "Unable to open foreground mask: " << fgpath << endl;
+                exit(EXIT_FAILURE);
+            } */
 
-                // read foreground mask
-                string fgpath = Config.GetForegroundFolder() + "/" + frameName + "." + Config.CachedImageType;
-                Mat fgmask = imread(fgpath, CV_LOAD_IMAGE_GRAYSCALE);
-                if(!frame.data)
-                {
-                    // error in opening an image file
-                    cerr << "Unable to open foreground mask: " << fgpath << endl;
-                    exit(EXIT_FAILURE);
-                } 
+            //string fgdump = Config.GetForegroundFolder() + "/" + frameInfo.FrameName + "." + Config.CachedImageType;
+            Mat fgmask = frameInfo.FrameForegroundMask;
+            //cv::cvtColor(fgmask, fgmask, CV_BGR2GRAY); // convert to greyscale
 
-                // erode and dilate to get rid of noises?
-                const int ErosionSize = 2;
-                Mat erosionKernel = getStructuringElement(MORPH_ELLIPSE,
-                                                          Size(2*ErosionSize+1,2*ErosionSize+1),
-                                                          Point(ErosionSize,ErosionSize));
-                erode(fgmask, fgmask, erosionKernel);
-                dilate(fgmask, fgmask, erosionKernel);
+            // erode and dilate to get rid of noises?
+            const int ErosionSize = 2;
+            Mat erosionKernel = getStructuringElement(MORPH_ELLIPSE,
+                Size(2*ErosionSize+1,2*ErosionSize+1),
+                Point(ErosionSize,ErosionSize));
+            erode(fgmask, fgmask, erosionKernel);
+            dilate(fgmask, fgmask, erosionKernel);
 
-                // hierarchical clustering
-                // FIXME: change to agglomerative clustering
-                /*while(!ClusterWithK(fgmask, curCluster, clmask)) {
-                    curCluster++;
+            // hierarchical clustering
+            // FIXME: change to agglomerative clustering
+            /*while(!ClusterWithK(fgmask, curCluster, clmask)) {
+            curCluster++;
+            }
+            while(curCluster>0 && ClusterWithK(fgmask, curCluster-1, clmask)) {
+            curCluster--;
+            }*/
+
+            const double dthreshold = 30.0; // FIXME: what are better options?
+            const int cthreshold = 9; //25;
+
+            vector<Agglomerative::Point2D> pix;
+            Mat nzPixels;
+            findNonZero(fgmask, nzPixels);
+            for(int i=0; i<nzPixels.size().height; i++)
+                pix.push_back(Agglomerative::Point2D(nzPixels.at<Point>(i).y,nzPixels.at<Point>(i).x));
+            Agglomerative::AgglomerativeClustering agc(pix);
+            vector<Agglomerative::Result> agcResult = agc.cluster(dthreshold,cthreshold);
+
+            Mat3f clmask = Mat3f(fgmask.size().height, fgmask.size().width, Vec3f(0.0,0.0,0.0));
+            //cv::cvtColor(fgmask, frameInfo.FrameObjectDetection, CV_GRAY2RGB); // convert to greyscale
+            // FIXME: autogenerate this later!
+            /*const int maxColor = 9;
+            const Vec3f color[maxColor] = {Vec3f(1.0,0.0,0.0), Vec3f(0.0,1.0,0.0), Vec3f(0.0,0.0,1.0),
+            Vec3f(0.4,0.0,0.0), Vec3f(0.0,0.4,0.0), Vec3f(0.0,0.0,0.4),
+            Vec3f(1.0,0.6,0.6), Vec3f(0.6,1.0,0.6), Vec3f(0.6,0.6,1.0)};
+            //assert(maxCluster<maxColor);
+            for(auto a: agcResult) {
+            clmask.at<Vec3f>(a.pt.x, a.pt.y) = color[a.id];
+            }*/
+
+            // Establish currentObjects
+            curObject.clear();
+            for(auto& a: agcResult) {
+                if(a.id>=curObject.size()) curObject.resize(a.id+1);
+                curObject[a.id].addPixel(a.pt.x,a.pt.y);
+            }
+            for(auto& obj: curObject) {
+                obj.statistics();
+            }
+            vector<vector<int>> adj(prevObject.size());
+            if(prevObject.size()) { // only do matching if previous objects are present
+                Matcher::ClusterMatcher cm(Matcher::obj2cinfo(prevObject), Matcher::obj2cinfo(curObject));
+                vector<pair<int,int>> matching = cm.solve();
+                // associate related pairs
+                for(auto rel: matching) {
+                    int pv = rel.first;
+                    int cv = rel.second;
+                    adj[pv].push_back(cv);
                 }
-                while(curCluster>0 && ClusterWithK(fgmask, curCluster-1, clmask)) {
-                    curCluster--;
-                }*/
-
-                const double dthreshold = 30.0; // FIXME: what are better options?
-                const int cthreshold = 9; //25;
-
-                vector<Agglomerative::Point2D> pix;
-                Mat nzPixels;
-                findNonZero(fgmask, nzPixels);
-                for(int i=0; i<nzPixels.size().height; i++)
-                    pix.push_back(Agglomerative::Point2D(nzPixels.at<Point>(i).y,nzPixels.at<Point>(i).x));
-                Agglomerative::AgglomerativeClustering agc(pix);
-                vector<Agglomerative::Result> agcResult = agc.cluster(dthreshold,cthreshold);
-
-                Mat3f clmask = Mat3f(fgmask.size().height, fgmask.size().width, Vec3f(0.0,0.0,0.0));
-                // FIXME: autogenerate this later!
-                /*const int maxColor = 9;
-                const Vec3f color[maxColor] = {Vec3f(1.0,0.0,0.0), Vec3f(0.0,1.0,0.0), Vec3f(0.0,0.0,1.0),
-                    Vec3f(0.4,0.0,0.0), Vec3f(0.0,0.4,0.0), Vec3f(0.0,0.0,0.4),
-                    Vec3f(1.0,0.6,0.6), Vec3f(0.6,1.0,0.6), Vec3f(0.6,0.6,1.0)};
-                //assert(maxCluster<maxColor);
-                for(auto a: agcResult) {
-                    clmask.at<Vec3f>(a.pt.x, a.pt.y) = color[a.id];
-                }*/
-
-                // Establish currentObjects
-                curObject.clear();
-                for(auto& a: agcResult) {
-                    if(a.id>=curObject.size()) curObject.resize(a.id+1);
-                    curObject[a.id].addPixel(a.pt.x,a.pt.y);
+            }
+            for(int i=0; i<prevObject.size(); i++) {
+                if(adj[i].size() == 0) continue; // dead-end cluster
+                const auto& po = prevObject[i];
+                int ind = 0;
+                for(auto cc: po.colorProfile) {
+                    int to = adj[i][ind++];
+                    if(ind==adj[i].size()) ind=0;
+                    curObject[to].adoptColor(cc);
                 }
-                for(auto& obj: curObject) {
-                    obj.statistics();
-                }
-                vector<vector<int>> adj(prevObject.size());
-                if(prevObject.size()) { // only do matching if previous objects are present
-                    Matcher::ClusterMatcher cm(Matcher::obj2cinfo(prevObject), Matcher::obj2cinfo(curObject));
-                    vector<pair<int,int>> matching = cm.solve();
-                    // associate related pairs
-                    for(auto rel: matching) {
-                        int pv = rel.first;
-                        int cv = rel.second;
-                        adj[pv].push_back(cv);
-                    }
-                }
-                for(int i=0; i<prevObject.size(); i++) {
-                    if(adj[i].size() == 0) continue; // dead-end cluster
-                    const auto& po = prevObject[i];
-                    int ind = 0;
-                    for(auto cc: po.colorProfile) {
-                        int to = adj[i][ind++];
-                        if(ind==adj[i].size()) ind=0;
-                        curObject[to].adoptColor(cc);
-                    }
-                }
-                for(auto& co: curObject) {
-                    if(co.colorProfile.size()==0) co.adoptColor(ColorProfile::randomProfile());
-                }
+            }
+            for(auto& co: curObject) {
+                if(co.colorProfile.size()==0) co.adoptColor(ColorProfile::randomProfile());
+            }
 
-                // draw bounding boxes
-                for(auto co: curObject) {
-                    ColorProfile cp = co.avgColor();
-                    rectangle(clmask, Point(co.y1,co.x1), Point(co.y2,co.x2), Scalar(cp.r,cp.g,cp.b));
-                }
+            // draw bounding boxes
+            for(auto co: curObject) {
+                ColorProfile cp = co.avgColor();
+                rectangle(clmask, Point(co.y1,co.x1), Point(co.y2,co.x2), Scalar(cp.r,cp.g,cp.b));
+                //rectangle(frameInfo.FrameObjectDetection, Point(co.y1,co.x1), Point(co.y2,co.x2), Scalar(cp.r,cp.g,cp.b));
+            }
+            frameInfo.FrameObjectDetection = clmask;
 
-                prevObject = curObject;
-                /*for(auto co: curObject) {
-                    ColorProfile cp = co.avgColor();
-                    cerr << "(" << co.x1 << "," << co.y1 << ") (" << co.x2 << "," << co.y2 << ") "
-                         << cp.r*255 << " " << cp.g*255 << " " << cp.b*255 << endl;
-                }*/
+            prevObject = curObject;
+            /*for(auto co: curObject) {
+            ColorProfile cp = co.avgColor();
+            cerr << "(" << co.x1 << "," << co.y1 << ") (" << co.x2 << "," << co.y2 << ") "
+            << cp.r*255 << " " << cp.g*255 << " " << cp.b*255 << endl;
+            }*/
 
-                // cerr << "ncluster = curObject.size() = " << curObject.size() << endl;
-                
-                if (Config.DisplayFrames)
-                {
-                    imshow("Frame", frame);
-                    //imshow("Foreground", fgmask);
-                    imshow("Foreground", clmask);
-                    waitKey(10);        // TODO: Add a way to better control FPS
-                }
-
-                ++iFrameNumber;
-            });
+            // cerr << "ncluster = curObject.size() = " << curObject.size() << endl;
         }
     }
 
-    void SmartVideoProcessor::UpdateDisplay()
+    void SmartVideoProcessor::UpdateDisplay(FrameInfo& info)
     {
-        progressBar.UpdateProgress(iFrameNumber);
-
-
+        stringstream strstr;
+        string statusString;
+        strstr << " -- input buffer: " << frameInBuffer.GetSize() << "/" << Config.MaxIOQueueSize << "";
+        statusString = strstr.str();
+        progressBar.UpdateProgress(info.FrameIndex, statusString);
+        
         if (Config.DisplayFrames)
         {
             //// display frame number in viewer
             //const Scalar black(255,255,255);
             //const Scalar white(0,0,0);
-
             //// clear text area
             //rectangle(frame, cv::Point(10, 2), cv::Point(100, 20), black, -1);
-
             //// draw frame number
             //putText(frame, frameNumberString.c_str(), cv::Point(15, 15), FONT_HERSHEY_SIMPLEX, 0.5 , white);
 
             //show the current frame and the fg mask
-            imshow("Frame", frame);
-            imshow("Foreground", foregroundMask);
+            imshow("Frame", info.Frame);
+            //imshow("Foreground", info.FrameForegroundMask);
+            imshow("Object", info.FrameObjectDetection);
 
-            waitKey(10);        // TODO: Add a way to better control FPS
+            waitKey(12);        // TODO: Add a way to better control FPS
         }
 
         // Dump the foreground information
-        std::string outfile = Config.GetForegroundFolder() + "/" + frameName + "." + Config.CachedImageType;  // save as CachedImageType
-        try {
+        std::string outfile = Config.GetForegroundFolder() + "/" + info.FrameName + "." + Config.CachedImageType;  // save as CachedImageType
+        try 
+        {
             MkDir(Config.GetForegroundFolder());        // make sure that folder exists
-            bool saved = imwrite(outfile, foregroundMask);
-            if (!saved) {
+            bool saved = imwrite(outfile, info.FrameForegroundMask);
+            if (!saved) 
+            {
                 cerr << "Unable to save " << outfile << endl;
             }
-        } catch (runtime_error& ex) {
+        } 
+        catch (runtime_error& ex) 
+        {
             cerr << "Exception dumping foreground image in ." << Config.CachedImageType << " format: " << ex.what() << endl;
             exit(0);
         }
-
     }
 
-    Job SmartVideoProcessor::GetNextIOJob()
+
+    bool SmartVideoProcessor::ReadNextInputFrame(JobIndex iFrame)
     {
-        return nullptr;
+        // TODO: Also write out buffer back to file
+
+        iFrame += clipEntry->StartFrame;
+        
+        auto nFrameCount = clipEntry->GetFrameCount();
+        if (iFrame >= nFrameCount)
+        {
+            return false;
+        }
+
+        if (!clipEntry)
+        {
+            // yield time slice
+            this_thread::sleep_for(chrono::milliseconds(1));
+            return true;
+        }
+        
+
+        FrameInfo frameInfo(iFrame);
+        frameInfo.FrameName = ToString(iFrame);
+        if (clipEntry->Type == ClipType::Video)
+        {
+            // read frame from video
+            if (!clipEntry->Video.read(frameInfo.Frame) || frameInfo.Frame.total() == 0)
+            {
+                cerr << "ERROR: Unable to read next frame (#" << frameInfo.FrameIndex << ") from video." << endl;
+                cout << "Press ENTER to exit." << endl; cin.get();
+                exit(EXIT_FAILURE);
+            }
+        }
+        else
+        {
+            // read frame from image
+            string folder = Config.GetClipFolder(*clipEntry);
+            auto fname = *(clipEntry->Filenames.begin() + iFrame);
+            string fpath = folder + "/" + fname;
+
+            frameInfo.Frame = imread(fpath);
+            if(!frameInfo.Frame.data)
+            {
+                // error in opening an image file
+                cerr << "Unable to open image frame: " << fpath << endl;
+                exit(EXIT_FAILURE);
+            } 
+        }
+
+        // add image to queue
+        frameInBuffer.Push(frameInfo);
+        return true;
+    }
+
+
+    void SmartVideoProcessor::Cleanup()
+    {
+        if (Config.DisplayFrames)
+        {
+            cvDestroyWindow("Frame");
+            //cvDestroyWindow("Foreground");
+            cvDestroyWindow("Object");
+        }
+
+        ioPool.Stop();
+        ioPool.Join();
     }
 }

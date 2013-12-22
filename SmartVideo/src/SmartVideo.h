@@ -15,30 +15,64 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/background_segm.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <memory>
+
+#include <queue>
 
 
 namespace SmartVideo
 {
-    /// Represents a clip (currently: Sequence of images)
+    enum class ClipType
+    {
+        ImageSequence,
+        Video
+    };
+
+    /// Represents a clip (video file, or sequence of images)
     struct ClipEntry
     {
+        ClipType Type;
         std::string Name;
         int StartFrame;
         std::string BaseFolder;
-        std::string ClipFile;
         std::string WeightFile;
+
+        /// If Type == Video, this is the video file name, else it is the list of images in the sequence
+        std::string ClipFile;
+
+        /// If Type == ImageSequence, contains all image file names
         std::vector<std::string> Filenames;
 
-        size_t GetFrameCount() const { return Filenames.size(); }
+        /// If Type == Video, allows access to the underlying video file
+        cv::VideoCapture Video;
+
+        /// TODO: Make const
+        size_t GetFrameCount() 
+        {
+            if (Type == ClipType::Video)
+            {
+                // TODO: Verify this approach
+                return Video.get(CV_CAP_PROP_FRAME_COUNT);
+            }
+            else
+            {
+                return Filenames.size(); 
+            }
+        }
     };
 
     /// Configuration for the SmartVideo processor.
     struct SmartVideoConfig
     {
+        // SmartVideoProcessor-specific configuration
         bool DisplayFrames;
         int ProgressBarLen;
+        int MaxIOQueueSize;
+        int NReadThreads;
+
+        // Data configuration
         std::string CfgFolder;
         std::string CfgFile;
 
@@ -52,6 +86,9 @@ namespace SmartVideo
         bool UseCachedForForeground;
 
         std::vector<ClipEntry> ClipEntries;
+
+        /// Amount of frames in this clip
+        int GetFrameCount() const { return ClipEntries.size(); }
 
         /// Get the path to the file containing all clip filenames.
         std::string GetClipListPath() const
@@ -77,6 +114,12 @@ namespace SmartVideo
             return CfgFolder + "/" + DataFolder + "/" + clipEntry.BaseFolder;
         }
 
+        /// Get the video file name.
+        std::string GetVideoFile(const ClipEntry& clipEntry) const
+        {
+            return CfgFolder + "/" + DataFolder + "/" + clipEntry.BaseFolder + "/" + clipEntry.ClipFile;
+        }
+
         /// Get the folder containing the cahced foreground datas
         std::string GetForegroundFolder() const
         {
@@ -88,32 +131,60 @@ namespace SmartVideo
     };
 
 
+    /// Data and meta-data of a frame, to be stored in frame buffer.
+    struct FrameInfo
+    {
+        std::string FrameName;
+        /// Frame index
+        Util::JobIndex FrameIndex;
+        /// Frame data
+        cv::Mat Frame;
+        /// Binary image, with only foreground set to 1
+        cv::Mat FrameForegroundMask;
+        /// Object frame
+        cv::Mat FrameObjectDetection;
+
+        FrameInfo(Util::JobIndex frameIndex) : FrameIndex(frameIndex) {}
+
+        bool operator<(const FrameInfo& other) const
+        {
+            return FrameIndex < other.FrameIndex;
+        }
+    };
+
 
     /// The class that does the "SmartVideo" processing.
     struct SmartVideoProcessor
     {
         const SmartVideoConfig Config;
 
-        const ClipEntry * clipEntry;                        // current clip
-        int iFrameNumber;                                   // index of current frame in video stream
-        std::string frameName;                              // file name of current frame
-        cv::Mat frame;                                      // current frame
-        cv::Mat foregroundMask;                             // binary image, with only the foreground set to 1
+        ClipEntry * clipEntry;                        // current clip
+        /// Stores frames read from disk
+        Util::ThreadSafeQueue<FrameInfo> frameInBuffer;
+        /// Stores frames to be written back to disk
+        Util::ThreadSafeQueue<FrameInfo> frameOutBuffer;
+
+        /// Index of next frame to be processed
+        Util::JobIndex iNextProcessFrame;
         std::unique_ptr<cv::BackgroundSubtractor> pMOG;     // MOG Background subtractor
         std::vector<float> frameWeights;                    // weight of every frame
 
-        /// Worker to perform all I/O operations
-        Util::Worker ioWorker;
+        /// WorkerPool for multi-threaded I/O
+        Util::WorkerPool ioPool;
         
         /// Progress bar used for showing progress in Console.
         Util::ConsoleProgressBar progressBar;
 
+        /// Object vector information needed for ObjectTracking
+        vector<ObjectProfile> prevObject, curObject;
 
         SmartVideoProcessor(SmartVideoConfig cfg) :
             Config(cfg),
+            clipEntry(nullptr),
+            frameInBuffer(cfg.MaxIOQueueSize, true, std::bind(&SmartVideoProcessor::IsNextInputFrame, this, std::placeholders::_1)),
+            frameOutBuffer(cfg.MaxIOQueueSize, false),
             progressBar(cfg.ProgressBarLen)
         {
-            //ioWorker.SetTaskQueue(std::bind(&SmartVideoProcessor::GetNextIOJob, this));
         }
 
         virtual ~SmartVideoProcessor()
@@ -123,51 +194,48 @@ namespace SmartVideo
 
     private:
         /// Initialize this guy.
-        void InitProcessing(const ClipEntry * clipEntry);
+        void InitProcessing(ClipEntry * clipEntry);
 
         /// Finalize the process.
         void FinishProcessing();
 
         /// Processes the frame that was last read from the input stream.
-        void ProcessInputFrame();
+        void ProcessNextFrame();
 
         /// Computes the weight of a uchar binary image.
-        float ComputeFrameWeight(cv::Mat frame);
+        float ComputeFrameWeight(FrameInfo& info);
 
         /// Draw progress. TODO: Trigger event instead, and let user draw.
-        void UpdateDisplay();
+        void UpdateDisplay(FrameInfo& info);
 
         /// Release all resources
-        void Cleanup()
-        {
-            if (Config.DisplayFrames)
-            {
-                cvDestroyWindow("Frame");
-                cvDestroyWindow("Foreground");
-            }
-        }
+        void Cleanup();
+
+        /// Task queue for file-reader thread.
+        bool ReadNextInputFrame(Util::JobIndex iFrame);
 
         // Sub-Procedures for each Part
-        void BackgroundSubtraction(const ClipEntry& clipEntry);
-        void ObjectTracking(const ClipEntry& clipEntry);
+        void BackgroundSubtraction(FrameInfo& info);
+        void InitObjectTracking();
+        void ObjectTracking(FrameInfo& info);
 
         // Helper Proccesses
         bool ClusterWithK(const cv::Mat& fgmask, int maxCluster, cv::Mat3f& clmask);
 
-        Util::Job GetNextIOJob();
-
     public:
+        bool IsNextInputFrame(const FrameInfo& info) const 
+        { 
+            return info.FrameIndex == iNextProcessFrame; 
+        }
+
         /// Set the weight of the given frame.
         void SetWeight(int iFrame, float weight)
         {
             frameWeights[iFrame] = weight;
         }
 
-        /// Process a video.
-        void ProcessVideo(const ClipEntry& clipEntry);
-
         /// Process a stream that is represented by a sequence of images.
-        void ProcessImages(const ClipEntry& clipEntry);
+        void ProcessClip(ClipEntry& clipEntry);
     };
 }
 
