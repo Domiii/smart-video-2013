@@ -88,7 +88,8 @@ namespace SmartVideo
         float Fps;
 
         /// Foreground metadata
-        std::string ForegroundDir, ForegroundFrameFile;
+        std::string ForegroundDir;
+        std::string MaskDir;
 
         double LearningRate;
         std::string CachedImageType;
@@ -145,10 +146,16 @@ namespace SmartVideo
             return CfgFolder + "/" + DataFolder + "/" + ForegroundDir;
         }
 
-        /// Get the folder containing the cahced foreground datas
-        std::string GetForegroundFrameFile(const ClipEntry& clipEntry) const
+        /// Get the folder containing the cahced mask datas
+        std::string GetMaskFolder(const ClipEntry& clipEntry) const
         {
-            return GetForegroundFolder(clipEntry) + "/" + ForegroundFrameFile;
+            return CfgFolder + "/" + DataFolder + "/" + MaskDir + "/" + clipEntry.Name;
+        }
+
+        /// Get the folder base of mask folder
+        std::string GetMaskFolderBase(const ClipEntry& clipEntry) const
+        {
+            return CfgFolder + "/" + DataFolder + "/" + MaskDir;
         }
 
         /// Read all config files
