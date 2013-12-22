@@ -4,9 +4,13 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+
+
 using namespace std;
 using namespace cv;
 using namespace Util;
+using namespace SmartVideo;
+
 
 void changeBar(int value, void* ptr){
 	mp::Player *p = (mp::Player*)ptr;
@@ -27,55 +31,19 @@ void changeSpeed(int value, void* ptr){
 
 namespace mp{
 
-	bool PlayerConfig::InitializeConfig(){
-		
-        std::string cfgPath(CfgFolder + "/" + CfgFile);
-        json_value * cfgRoot = JSonReadFile(cfgPath);
-        if (!cfgRoot) return false;
-		
-        DataFolder = JSonGetProperty(cfgRoot, "dataDir")->GetStringValue();
-        ClipinfoDir = JSonGetProperty(cfgRoot, "clipDir")->GetStringValue();
-        ClipListFile = JSonGetProperty(cfgRoot, "clipFile")->GetStringValue();
-		
-        std::string clipListPath(GetClipListPath());
-        json_value * clipRoot = JSonReadFile(clipListPath);
-        if (!clipRoot) return false;
-
-        ClipEntries.resize(clipRoot->children.size());
-
-        int i = 0;
-        for (auto&  x : clipRoot->children)
-        {
-            ClipEntry& entry = ClipEntries[i++];
-            json_value * entryNode = x.second;
-            entry.Name = entryNode->name;
-            entry.BaseFolder = JSonGetProperty(entryNode, "baseDir")->GetStringValue();
-            entry.ClipFile = JSonGetProperty(entryNode, "frameFile")->GetStringValue();
-            entry.WeightFile = JSonGetProperty(entryNode, "weightFile")->GetStringValue();
-			entry.SequenceFile = JSonGetProperty(entryNode, "sequenceFile")->GetStringValue();
-            entry.StartFrame = JSonGetProperty(entryNode, "startFrame")->int_value;
-            entry.Filenames = ReadLines(GetFrameFilePath(entry));
-        }
-		
-        return true;
+	bool PlayerConfig::InitializeConfig()
+    {
+        return SmartVideoConfig::InitializeConfig();
     }
 	
-	void Player::initPlayer(const ClipEntry& clipEntry){
-
-		cout << "display " << clipEntry.Name << " ..." << endl;
-		cout << "frameNumber: " << clipEntry.GetFrameCount() << endl;
-		cout << "weightPath: " << Config.GetWeightsPath(clipEntry) << endl;
-		cout << "sequencePath: " << Config.GetSequencePath(clipEntry) << endl;
-		
-		initName(clipEntry);
-		
+	void Player::initPlayer(ClipEntry& clipEntry)
+    {
+        clipMaskFileNames = ReadLines(Config.GetForegroundFrameFile(clipEntry));
 
 		frameNumber = clipEntry.GetFrameCount();
 		startFrameNumber = 0;
 		nowFrameNumber = 0;
 		waitKeyNumber = 32;
-
-		sequencePath = Config.GetSequencePath(clipEntry);
 		nowSequenceNumber = 0;
 
 		weightPath = Config.GetWeightsPath(clipEntry);
@@ -98,23 +66,16 @@ namespace mp{
 		
 	}
 
-	void Player::initName(const ClipEntry& clipEntry){
-		string folder = Config.GetClipFolder(clipEntry);
-        // iterate over all files:
-        int iFrameNumber = 0;
-        for_each(clipEntry.Filenames.begin() + iFrameNumber, clipEntry.Filenames.end(), [&](const string& fname) {
-            // read image file
-            string fpath = folder + "/" + fname;
-			frameName.push_back(fpath);
-            iFrameNumber++;
-        });
-		
-	}
-
 	void Player::initSequence(){
 		FILE *fp;
-		cout << "sequencePath: "  <<sequencePath.c_str() << endl;
 		fp = fopen(sequencePath.c_str(),"r");
+        if (!fp)
+        {
+            cerr << "ERROR: Could not open file " << sequencePath << endl ;
+            cout << "Press ENTER to exit." << endl; cin.get();
+            exit(EXIT_FAILURE);
+        }
+
 		int tmps;
 		while(fscanf(fp,"%d",&tmps)!=EOF){
 			s.push_back(tmps);
@@ -123,10 +84,17 @@ namespace mp{
 		cout << "sequenceNumber: " << sequenceNumber << endl;
 	}
 
+
 	void Player::initWeight(){
 
 		FILE *fp;
 		fp = fopen(weightPath.c_str(),"r");
+        if (!fp)
+        {
+            cerr << "ERROR: Could not open file " << sequencePath << endl ;
+            cout << "Press ENTER to exit." << endl; cin.get();
+            exit(EXIT_FAILURE);
+        }
 
 		for(int i=0; i<frameNumber; i++){
 			double tmpw;
@@ -263,21 +231,53 @@ namespace mp{
 		}
 	}
 
-	cv::Mat Player::imgProcessing(int index){
-		string framePath;
-		framePath = frameName[index];
-		cout << framePath << endl;
-		Mat frame = imread(framePath, CV_LOAD_IMAGE_COLOR);
+	cv::Mat Player::imgProcessing(int iFrame){
+        // read actual frame
+        Mat frame;
+        if (clipEntry->Type == ClipType::Video)
+        {
+            // read frame from video
+            if (!clipEntry->Video.read(frame) || frame.total() == 0)
+            {
+                cerr << "ERROR: Unable to read next frame (#" << iFrame << ") from video." << endl;
+                cout << "Press ENTER to exit." << endl; cin.get();
+                exit(EXIT_FAILURE);
+            }
+        }
+        else
+        {
+            // read frame from image
+		    string frameFolder = Config.GetClipFolder(*clipEntry);
+            string framePath = frameFolder + "/" + clipEntry->Filenames[iFrame];
+            string folder = Config.GetClipFolder(*clipEntry);
+            string fname = *(clipEntry->Filenames.begin() + iFrame);
+            string fpath = folder + "/" + fname;
 
-		/*
-		for(int i=0; i<frame.rows; i++){
-			for(int j=0; j<frame.cols; j++){
-				frame.at<Vec3b>(i,j)[0] = 255;
-				frame.at<Vec3b>(i,j)[1] = 255;
-				frame.at<Vec3b>(i,j)[2] = 255;
-			}
-		}
-		*/
+            frame = imread(fpath);
+            if(!frame.data)
+            {
+                // error in opening an image file
+                cerr << "Unable to open image frame: " << fpath << endl;
+                exit(EXIT_FAILURE);
+            } 
+        }
+
+
+  //      // read mask
+  //      auto foregroundFolder = Config.GetForegroundFolder(*clipEntry);
+  //      auto foregroundPath = foregroundFolder + "/" + clipMaskFileNames[iFrame];
+		//Mat mask = imread(foregroundPath, CV_LOAD_IMAGE_COLOR);
+
+  //      // substitute mask in frame
+		//for(int i=0; i<frame.rows; i++){
+		//	for(int j=0; j<frame.cols; j++){
+		//		if(mask.at<Vec3b>(i,j)[0]!=0 || mask.at<Vec3b>(i,j)[1]!=0 || mask.at<Vec3b>(i,j)[2]!=0){
+		//			frame.at<Vec3b>(i,j)[0] = mask.at<Vec3b>(i,j)[0]!=0;
+		//			frame.at<Vec3b>(i,j)[1] = mask.at<Vec3b>(i,j)[0]!=0;
+		//			frame.at<Vec3b>(i,j)[2] = mask.at<Vec3b>(i,j)[0]!=0;
+		//		}
+		//	}
+		//}
 
 		return frame;
 	}
@@ -299,7 +299,6 @@ namespace mp{
 	void Player::endPlayer(){
 		destroyWindow("Display");
 		destroyWindow("Weight");
-		frameName.clear();
 		s.clear();
 		w.clear();
 	}

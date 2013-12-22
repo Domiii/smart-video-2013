@@ -1,20 +1,14 @@
 {
-	"dataDir" : "../data",
-	"clipDir" : "clipinfo",
-	"clipFile" : "clips.json",
-	"fgDir" : "cached/foreground",
+   "dataDir" : "../data",
+   "clipDir" : "clipinfo",
+   "clipFile" : "clips.json",
 
-	"learningRate" : 0.05,
-	"displayResults" : false,
+   "learningRate" : 0.05,
+   "displayResults" : true,
 
-	"cachedImageType" : "bmp",
-	"useCachedForForeground" : true
-    "fgDir" : "cached/foreground",
-
-    "learningRate" : 0.05,
-    "displayResults" : false,
-
-    "cachedImageType" : "bmp",
-    "useCachedForForeground" : true
+   "fgDir" : "cached/foreground",
+   "maskDir" : "clipinfo/cached/foreground",
+   "cachedImageType" : "bmp",
+   "useCachedForForeground" : false,
 
 }

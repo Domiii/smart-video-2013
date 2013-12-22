@@ -5,7 +5,14 @@
 #include "ConsoleUtil.h"
 #include "JSonUtil.h"
 #include "Workers.h"
+#include "agglomerative.h"
+#include "matcher.h"
 
+#include "opencv2/ml/ml.hpp"
+#include "opencv2/flann/flann.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/background_segm.hpp>
 #include <opencv2/opencv.hpp>
@@ -59,6 +66,8 @@ namespace SmartVideo
     /// Configuration for the SmartVideo processor.
     struct SmartVideoConfig
     {
+        json_value * cfgRoot;
+
         // SmartVideoProcessor-specific configuration
         bool DisplayFrames;
         int ProgressBarLen;
@@ -72,7 +81,9 @@ namespace SmartVideo
         std::string DataFolder;
         std::string ClipinfoDir;
         std::string ClipListFile;
-        std::string ForegroundDir;
+
+        /// Foreground metadata
+        std::string ForegroundDir, ForegroundFrameFile;
 
         double LearningRate;
         std::string CachedImageType;
@@ -114,13 +125,19 @@ namespace SmartVideo
         }
 
         /// Get the folder containing the cahced foreground datas
-        std::string GetForegroundFolder() const
+        std::string GetForegroundFolder(const ClipEntry& clipEntry) const
         {
-            return CfgFolder + "/" + ClipinfoDir + "/" + ForegroundDir;
+            return CfgFolder + "/" + DataFolder + "/" + clipEntry.BaseFolder + "/" + ForegroundDir;
+        }
+
+        /// Get the folder containing the cahced foreground datas
+        std::string GetForegroundFrameFile(const ClipEntry& clipEntry) const
+        {
+            return GetForegroundFolder(clipEntry) + "/" + ForegroundFrameFile;
         }
 
         /// Read all config files
-        bool InitializeConfig();
+        virtual bool InitializeConfig();
     };
 
 
@@ -134,6 +151,8 @@ namespace SmartVideo
         cv::Mat Frame;
         /// Binary image, with only foreground set to 1
         cv::Mat FrameForegroundMask;
+        /// Object frame
+        cv::Mat FrameObjectDetection;
 
         FrameInfo(Util::JobIndex frameIndex) : FrameIndex(frameIndex) {}
 
@@ -166,6 +185,8 @@ namespace SmartVideo
         /// Progress bar used for showing progress in Console.
         Util::ConsoleProgressBar progressBar;
 
+        /// Object vector information needed for ObjectTracking
+        vector<ObjectProfile> prevObject, curObject;
 
         SmartVideoProcessor(SmartVideoConfig cfg) :
             Config(cfg),
@@ -205,8 +226,11 @@ namespace SmartVideo
 
         // Sub-Procedures for each Part
         void BackgroundSubtraction(FrameInfo& info);
-        void ObjectDetection(FrameInfo& info);
+        void InitObjectTracking();
         void ObjectTracking(FrameInfo& info);
+
+        // Helper Proccesses
+        bool ClusterWithK(const cv::Mat& fgmask, int maxCluster, cv::Mat3f& clmask);
 
     public:
         bool IsNextInputFrame(const FrameInfo& info) const 

@@ -3,9 +3,19 @@
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\MyPlayer.cpp" />
-    <ClCompile Include="dep\vjson\json.cpp" />
+    <ClCompile Include="dep\vjson\json.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SmartVideo\src\SmartVideo.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\MyPlayer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="SmartVideo">
+      <UniqueIdentifier>{80548f27-705e-49ba-8c49-89bcfee4a499}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
