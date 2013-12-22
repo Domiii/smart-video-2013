@@ -1,20 +1,39 @@
 {
+	"cafe-1" : {
+			"type" : "vid",
+			"startFrame" : 0,
+			"baseDir" : "",
+			"frameFile" : "a.mp4",
+			"weightFile" : "cafe1-weights"
+	},
+	"cafe-2" : {
+			"type" : "vid",
+			"startFrame" : 0,
+			"baseDir" : "",
+			"frameFile" : "b.mp4",
+			"weightFile" : "cafe2-weights"
+	},
+	"cafe-3" : {
+			"type" : "vid",
+			"startFrame" : 0,
+			"baseDir" : "",
+			"frameFile" : "c.mp4",
+			"weightFile" : "cafe3-weights"
+	},
 	"pedestrian" : {
-		"type" : "img",
-		"startFrame" : 0,
-		"fps" : 26,
-		"baseDir" : "dataset/baseline/pedestrians/input",
-		"frameFile" : "pedestrians.txt",
-		"weightFile" : "weight",
-		"sequenceFile" : "play_sequence"
+			"type" : "img",
+			"startFrame" : 290,
+			"fps" : 26,
+			"baseDir" : "dataset/baseline/pedestrians/input",
+			"frameFile" : "pedestrians.txt",
+			"weightFile" : "pedestrians-weights"
 	},
 	"road" : {
-		"type" : "img",
-		"fps" : 26,
-		"startFrame" : 0,
-		"baseDir" : "SABS/Test/Basic",
-		"frameFile" : "basic.txt",
-		"weightFile" : "weight",
-		"sequenceFile" : "play_sequence"
+			"type" : "img",
+			"startFrame" : 5,
+			"fps" : 26,
+			"baseDir" : "SABS/Test/Basic/",
+			"frameFile" : "basic.txt",
+			"weightFile" : "basic-weights"
 	}
 }
