@@ -402,20 +402,21 @@ namespace SmartVideo
             frameInfo.matchingCost; // recorded in the section of hungarian matching
             frameInfo.fgArea = nzPixels.size().height;
 
+            //frameInfo.FrameObjectDetection = frameInfo.Frame*0.2;
+            /*for(int i=0; i<nzPixels.size().height; i++) {
+                int r = nzPixels.at<Point>(i).y;
+                int c = nzPixels.at<Point>(i).x;
+                //frameInfo.FrameObjectDetection.at<Vec3s>(r,c) *= 3;
+            }*/
             // draw bounding boxes
             for(auto co: curObject) {
                 ColorProfile cp = co.avgColor();
-                rectangle(clmask, Point(co.y1,co.x1), Point(co.y2,co.x2), Scalar(cp.r,cp.g,cp.b));
-                //rectangle(frameInfo.FrameObjectDetection, Point(co.y1,co.x1), Point(co.y2,co.x2), Scalar(cp.r,cp.g,cp.b));
+                rectangle(clmask, Point(co.y1,co.x1), Point(co.y2,co.x2), Scalar(cp.r,cp.g,cp.b), 2);
+                //rectangle(frameInfo.FrameObjectDetection, Point(co.y1,co.x1), Point(co.y2,co.x2), Scalar(cp.r,cp.g,cp.b), 2);
             }
             frameInfo.FrameObjectDetection = clmask;
 
             prevObject = curObject;
-            /*for(auto co: curObject) {
-            ColorProfile cp = co.avgColor();
-            cerr << "(" << co.x1 << "," << co.y1 << ") (" << co.x2 << "," << co.y2 << ") "
-            << cp.r*255 << " " << cp.g*255 << " " << cp.b*255 << endl;
-            }*/
 
             // cerr << "ncluster = curObject.size() = " << curObject.size() << endl;
         }
