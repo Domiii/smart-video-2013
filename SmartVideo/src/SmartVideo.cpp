@@ -12,11 +12,11 @@ using namespace Util;
 
 namespace SmartVideo
 {
-    /// Read all config files
+    /// Read config file
     bool SmartVideoConfig::InitializeConfig()
     {
         std::string cfgPath(CfgFolder + "/" + CfgFile);
-        json_value * cfgRoot = JSonReadFile(cfgPath);
+        cfgRoot = JSonReadFile(cfgPath);
         if (!cfgRoot) return false;
 
         // TODO: Video files
@@ -97,7 +97,7 @@ namespace SmartVideo
             // create GUI windows (for debugging purposes)
             namedWindow("Frame");
             namedWindow("Object");
-            //namedWindow("Foreground");
+            namedWindow("Foreground");
         }
 
         auto nTotalFrames = clipEntry->GetFrameCount() - 1;
@@ -153,7 +153,6 @@ namespace SmartVideo
     void SmartVideoProcessor::ProcessClip(ClipEntry& clipEntry) 
     {
         // initialize
-        cerr << "Initializing..." << endl;
         InitProcessing(&clipEntry);
 
         // iterate over all files:
@@ -191,6 +190,11 @@ namespace SmartVideo
 
     void SmartVideoProcessor::BackgroundSubtraction(FrameInfo& info) {
         if(!Config.UseCachedForForeground) {
+            // denoise
+            /*Mat tmp(info.Frame);
+            cv::boxFilter(info.Frame, tmp, 1, cv::Size(3,3), cv::Point(1,1));
+            info.Frame = tmp;*/
+
             //update the background model
             pMOG->operator()(info.Frame, info.FrameForegroundMask, Config.LearningRate);
         }
@@ -323,11 +327,15 @@ namespace SmartVideo
             //cv::cvtColor(fgmask, fgmask, CV_BGR2GRAY); // convert to greyscale
 
             // erode and dilate to get rid of noises?
-            const int ErosionSize = 2;
+            const int ErosionSize = 1;
+            const int DilateSize = 2;
             Mat erosionKernel = getStructuringElement(MORPH_ELLIPSE,
                 Size(2*ErosionSize+1,2*ErosionSize+1),
                 Point(ErosionSize,ErosionSize));
             erode(fgmask, fgmask, erosionKernel);
+            Mat dilateKernel = getStructuringElement(MORPH_ELLIPSE,
+                Size(2*DilateSize+1,2*DilateSize+1),
+                Point(DilateSize,DilateSize));
             dilate(fgmask, fgmask, erosionKernel);
 
             // hierarchical clustering
@@ -464,7 +472,7 @@ namespace SmartVideo
 
             //show the current frame and the fg mask
             imshow("Frame", info.Frame);
-            //imshow("Foreground", info.FrameForegroundMask);
+            imshow("Foreground", info.FrameForegroundMask);
             imshow("Object", info.FrameObjectDetection);
 
             waitKey(12);        // TODO: Add a way to better control FPS
@@ -548,7 +556,7 @@ namespace SmartVideo
         if (Config.DisplayFrames)
         {
             cvDestroyWindow("Frame");
-            //cvDestroyWindow("Foreground");
+            cvDestroyWindow("Foreground");
             cvDestroyWindow("Object");
         }
 

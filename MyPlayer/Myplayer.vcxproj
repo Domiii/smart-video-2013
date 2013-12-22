@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\SmartVideo\src\SmartVideo.cpp" />
     <ClCompile Include="dep\vjson\json.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\MyPlayer.cpp" />
