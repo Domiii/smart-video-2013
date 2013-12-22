@@ -39,9 +39,11 @@ namespace mp{
 	
 	void Player::initPlayer(ClipEntry& clipEntry)
     {
+		this->clipEntry = &clipEntry;
         clipMaskFileNames = ReadLines(Config.GetForegroundFrameFile(clipEntry));
 
 		frameNumber = clipEntry.GetFrameCount();
+		cout << "frameNumber: " << frameNumber << endl;
 		startFrameNumber = 0;
 		nowFrameNumber = 0;
 		waitKeyNumber = 32;
@@ -51,6 +53,7 @@ namespace mp{
 		weightW = 1000;
 		weightH = 100;
 
+		sequencePath = "../clipinfo/play_sequence";
 		initWeight();
 		initSequence();
 
@@ -68,21 +71,21 @@ namespace mp{
 	}
 
 	void Player::initSequence(){
-		/*FILE *fp;
+		FILE *fp;
 		fp = fopen(sequencePath.c_str(),"r");
         if (!fp)
         {
             cerr << "ERROR: Could not open file " << sequencePath << endl ;
             cerr << "Press ENTER to exit." << endl; cin.get();
             exit(EXIT_FAILURE);
-        }*/
+        }
 
-		/*int tmps;
+		int tmps;
 		while(fscanf(fp,"%d",&tmps)!=EOF){
 			s.push_back(tmps);
 		}
 		sequenceNumber = (int)s.size();
-		cout << "sequenceNumber: " << sequenceNumber << endl;*/
+		cout << "sequenceNumber: " << sequenceNumber << endl;
 	}
 
 
@@ -237,6 +240,7 @@ namespace mp{
         Mat frame;
         if (clipEntry->Type == ClipType::Video)
         {
+			clipEntry->Video.set(CV_CAP_PROP_POS_FRAMES, iFrame);
             // read frame from video
             if (!clipEntry->Video.read(frame) || frame.total() == 0)
             {
@@ -255,6 +259,7 @@ namespace mp{
             string fpath = folder + "/" + fname;
 
             frame = imread(fpath);
+			cout << fpath << endl;
             if(!frame.data)
             {
                 // error in opening an image file
