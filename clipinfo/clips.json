@@ -1,11 +1,4 @@
 {
-	"road" : {
-		"fps" : 26,
-		"startFrame" : 5,
-		"baseDir" : "SABS/Test/Basic/",
-		"frameFile" : "basic.txt",
-		"weightFile" : "basic-weights"
-	},
 	"pedestrian" : {
 		"fps" : 26,
 		"startFrame" : 290,

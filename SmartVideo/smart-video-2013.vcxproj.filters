@@ -14,6 +14,9 @@
     <Filter Include="Util">
       <UniqueIdentifier>{64ccda6d-4e61-481c-816c-c69e2b919492}</UniqueIdentifier>
     </Filter>
+    <Filter Include="kdtree++">
+      <UniqueIdentifier>{7ffddc78-fd51-4f5d-bdff-ec5f088097f4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dep\vjson\json.cpp">
@@ -27,6 +30,18 @@
     </ClCompile>
     <ClCompile Include="src\Workers.cpp">
       <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\agglomerative.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
+    <ClCompile Include="src\hungarian.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
+    <ClCompile Include="src\matcher.cpp">
+      <Filter>SmartVideo</Filter>
+    </ClCompile>
+    <ClCompile Include="src\objectProfile.cpp">
+      <Filter>SmartVideo</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -50,6 +65,36 @@
     </ClInclude>
     <ClInclude Include="src\FileUtil.h">
       <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\kdtree++\allocator.hpp">
+      <Filter>kdtree++</Filter>
+    </ClInclude>
+    <ClInclude Include="src\kdtree++\function.hpp">
+      <Filter>kdtree++</Filter>
+    </ClInclude>
+    <ClInclude Include="src\kdtree++\iterator.hpp">
+      <Filter>kdtree++</Filter>
+    </ClInclude>
+    <ClInclude Include="src\kdtree++\kdtree.hpp">
+      <Filter>kdtree++</Filter>
+    </ClInclude>
+    <ClInclude Include="src\kdtree++\node.hpp">
+      <Filter>kdtree++</Filter>
+    </ClInclude>
+    <ClInclude Include="src\kdtree++\region.hpp">
+      <Filter>kdtree++</Filter>
+    </ClInclude>
+    <ClInclude Include="src\objectProfile.h">
+      <Filter>SmartVideo</Filter>
+    </ClInclude>
+    <ClInclude Include="src\agglomerative.h">
+      <Filter>SmartVideo</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hungarian.h">
+      <Filter>SmartVideo</Filter>
+    </ClInclude>
+    <ClInclude Include="src\matcher.h">
+      <Filter>SmartVideo</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

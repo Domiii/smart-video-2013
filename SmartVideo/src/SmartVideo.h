@@ -5,7 +5,14 @@
 #include "ConsoleUtil.h"
 #include "JSonUtil.h"
 #include "Workers.h"
+#include "agglomerative.h"
+#include "matcher.h"
 
+#include "opencv2/ml/ml.hpp"
+#include "opencv2/flann/flann.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/background_segm.hpp>
 
@@ -142,8 +149,10 @@ namespace SmartVideo
 
         // Sub-Procedures for each Part
         void BackgroundSubtraction(const ClipEntry& clipEntry);
-        void ObjectDetection(const ClipEntry& clipEntry);
         void ObjectTracking(const ClipEntry& clipEntry);
+
+        // Helper Proccesses
+        bool ClusterWithK(const cv::Mat& fgmask, int maxCluster, cv::Mat3f& clmask);
 
         Util::Job GetNextIOJob();
 

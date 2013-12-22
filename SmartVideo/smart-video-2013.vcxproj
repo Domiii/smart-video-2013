@@ -20,15 +20,29 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dep\vjson\json.cpp" />
+    <ClCompile Include="src\agglomerative.cpp" />
+    <ClCompile Include="src\hungarian.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\matcher.cpp" />
+    <ClCompile Include="src\objectProfile.cpp" />
     <ClCompile Include="src\SmartVideo.cpp" />
     <ClCompile Include="src\Workers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dep\vjson\json.h" />
+    <ClInclude Include="src\agglomerative.h" />
     <ClInclude Include="src\ConsoleUtil.h" />
     <ClInclude Include="src\FileUtil.h" />
+    <ClInclude Include="src\hungarian.h" />
     <ClInclude Include="src\JSonUtil.h" />
+    <ClInclude Include="src\kdtree++\allocator.hpp" />
+    <ClInclude Include="src\kdtree++\function.hpp" />
+    <ClInclude Include="src\kdtree++\iterator.hpp" />
+    <ClInclude Include="src\kdtree++\kdtree.hpp" />
+    <ClInclude Include="src\kdtree++\node.hpp" />
+    <ClInclude Include="src\kdtree++\region.hpp" />
+    <ClInclude Include="src\matcher.h" />
+    <ClInclude Include="src\objectProfile.h" />
     <ClInclude Include="src\SmartVideo.h" />
     <ClInclude Include="src\Util.h" />
     <ClInclude Include="src\Workers.h" />
