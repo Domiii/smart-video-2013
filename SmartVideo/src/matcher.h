@@ -56,7 +56,7 @@ namespace Matcher
                        vector<ClusterInfo> rvInfo,
                        int costOverlap = 2000,
                        int rateAbandon = 20,
-                       int rateDisplacement = 10,
+                       int rateDisplacement = 5,
                        int rateSizeChange = 1):
                        lvInfo(lvInfo), rvInfo(rvInfo), costOverlap(costOverlap), rateAbandon(rateAbandon),
                        rateDisplacement(rateDisplacement), rateSizeChange(rateSizeChange) {
@@ -64,7 +64,7 @@ namespace Matcher
             ln = lvInfo.size();
             rn = rvInfo.size();
         }
-        vector<pair<int,int>> solve();
+        int solve(vector<pair<int,int>> &);
     };
 
     vector<ClusterInfo> obj2cinfo(const vector<SmartVideo::ObjectProfile>& objs);

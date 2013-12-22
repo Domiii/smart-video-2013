@@ -144,6 +144,10 @@ namespace SmartVideo
         /// Object frame
         cv::Mat FrameObjectDetection;
 
+        /// Informations for calculation of frame weight
+        int numObject;
+        double fgArea, matchingCost;
+
         FrameInfo(Util::JobIndex frameIndex) : FrameIndex(frameIndex) {}
 
         bool operator<(const FrameInfo& other) const
@@ -218,6 +222,7 @@ namespace SmartVideo
         void BackgroundSubtraction(FrameInfo& info);
         void InitObjectTracking();
         void ObjectTracking(FrameInfo& info);
+        void SmoothWeights();
 
         // Helper Proccesses
         bool ClusterWithK(const cv::Mat& fgmask, int maxCluster, cv::Mat3f& clmask);

@@ -114,29 +114,13 @@ namespace SmartVideo
     /// Compute some measure of frame "importance".
     float SmartVideoProcessor::ComputeFrameWeight(FrameInfo& frameInfo)
     {
-        uint32 nForegroundPixels  = 0;
-
-        // count all foreground pixels
-        int cols = frameInfo.Frame.cols, rows = frameInfo.Frame.rows;
-        if (frameInfo.Frame.isContinuous())
-        {
-            cols *= rows;
-            rows = 1;
-        }
-        for(int i = 0; i < rows; i++)
-        {
-            auto Mi = frameInfo.Frame.ptr<uchar>(i);
-            for(int j = 0; j < cols; j++)
-            {
-                auto value = Mi[j];
-                if (value > 0)
-                    ++nForegroundPixels;
-            }
-        }
-
-        // return weight as ratio of foreground to total pixels
-        float ratio = static_cast<float>(nForegroundPixels) / (cols * rows);
-        return ratio;
+        const float coefFgArea = 1.0;
+        const float coefMatchingCost = 1e-4;
+        const float coefNumObject = 800.0;
+        //cerr << frameInfo.fgArea << " " << frameInfo.matchingCost << " " << frameInfo.numObject << endl;
+        float wt = coefFgArea*frameInfo.fgArea + coefMatchingCost*frameInfo.matchingCost + coefNumObject*frameInfo.numObject;
+        
+        return wt;
     }
 
 
@@ -179,6 +163,9 @@ namespace SmartVideo
             ProcessNextFrame();
         }
 
+        // smooth weight vector
+        SmoothWeights();
+
         // finalize the process
         FinishProcessing();
     }
@@ -194,6 +181,7 @@ namespace SmartVideo
         ObjectTracking(info);
 
         // compute and set weight
+        //cerr << "frameweight:" << ComputeFrameWeight(info) << endl;
         SetWeight(iNextProcessFrame, ComputeFrameWeight(info));
 
         // draw progress
@@ -330,31 +318,6 @@ namespace SmartVideo
         if(true/*!Config.UseCachedForObjectDetection*/) {
             cvflann::Logger::setLevel(cvflann::FLANN_LOG_INFO); // FIXME: remove later
 
-            //string folder = Config.GetClipFolder(clipEntry);
-            // iterate over all files:
-            //iFrameNumber = 0;
-            //iFrameNumber = clipEntry.StartFrame;
-            // read image file
-            /*string imgpath = folder + "/" + fname;
-            frameName = fname;
-            frame = imread(imgpath);
-            if(!frame.data)
-            {
-                // error in opening an image file
-                cerr << "Unable to open image frame: " << imgpath << endl;
-                exit(EXIT_FAILURE);
-            } 
-
-            // read foreground mask
-            string fgpath = Config.GetForegroundFolder() + "/" + frameName + "." + Config.CachedImageType;
-            Mat fgmask = imread(fgpath, CV_LOAD_IMAGE_GRAYSCALE);
-            if(!frame.data)
-            {
-                // error in opening an image file
-                cerr << "Unable to open foreground mask: " << fgpath << endl;
-                exit(EXIT_FAILURE);
-            } */
-
             //string fgdump = Config.GetForegroundFolder() + "/" + frameInfo.FrameName + "." + Config.CachedImageType;
             Mat fgmask = frameInfo.FrameForegroundMask;
             //cv::cvtColor(fgmask, fgmask, CV_BGR2GRAY); // convert to greyscale
@@ -377,7 +340,7 @@ namespace SmartVideo
             }*/
 
             const double dthreshold = 30.0; // FIXME: what are better options?
-            const int cthreshold = 9; //25;
+            const int cthreshold = 64; //25;
 
             vector<Agglomerative::Point2D> pix;
             Mat nzPixels;
@@ -409,16 +372,17 @@ namespace SmartVideo
                 obj.statistics();
             }
             vector<vector<int>> adj(prevObject.size());
-            if(prevObject.size()) { // only do matching if previous objects are present
-                Matcher::ClusterMatcher cm(Matcher::obj2cinfo(prevObject), Matcher::obj2cinfo(curObject));
-                vector<pair<int,int>> matching = cm.solve();
-                // associate related pairs
-                for(auto rel: matching) {
-                    int pv = rel.first;
-                    int cv = rel.second;
-                    adj[pv].push_back(cv);
-                }
+            //if(prevObject.size()) { // only do matching if previous objects are present
+            Matcher::ClusterMatcher cm(Matcher::obj2cinfo(prevObject), Matcher::obj2cinfo(curObject));
+            vector<pair<int,int>> matching;
+            frameInfo.matchingCost = cm.solve(matching);
+            // associate related pairs
+            for(auto rel: matching) {
+                int pv = rel.first;
+                int cv = rel.second;
+                adj[pv].push_back(cv);
             }
+            //}
             for(int i=0; i<prevObject.size(); i++) {
                 if(adj[i].size() == 0) continue; // dead-end cluster
                 const auto& po = prevObject[i];
@@ -432,6 +396,11 @@ namespace SmartVideo
             for(auto& co: curObject) {
                 if(co.colorProfile.size()==0) co.adoptColor(ColorProfile::randomProfile());
             }
+
+            // record frame weight informatinos
+            frameInfo.numObject = curObject.size();
+            frameInfo.matchingCost; // recorded in the section of hungarian matching
+            frameInfo.fgArea = nzPixels.size().height;
 
             // draw bounding boxes
             for(auto co: curObject) {
@@ -450,6 +419,28 @@ namespace SmartVideo
 
             // cerr << "ncluster = curObject.size() = " << curObject.size() << endl;
         }
+    }
+
+    void SmartVideoProcessor::SmoothWeights()
+    {
+        const int halfWindow = 5;
+        int cc = 0;
+        float runningSum = 0.0;
+        vector<float> newWeights;
+        newWeights.reserve(frameWeights.size());
+        for(size_t i=0; i<frameWeights.size(); i++) {
+            if(i-halfWindow>=0) {
+                cc--;
+                runningSum -= frameWeights[i-halfWindow];
+            }
+            if(i+halfWindow<frameWeights.size()) {
+                cc++;
+                runningSum += frameWeights[i+halfWindow];
+            }
+            double w = runningSum / cc;
+            newWeights.push_back(w);
+        }
+        frameWeights = newWeights;
     }
 
     void SmartVideoProcessor::UpdateDisplay(FrameInfo& info)

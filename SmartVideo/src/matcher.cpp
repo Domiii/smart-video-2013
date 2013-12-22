@@ -21,7 +21,7 @@ namespace Matcher {
         int dis = (int)sqrt((lvInfo[a].x-rvInfo[b].x)*(lvInfo[a].x-rvInfo[b].x)+(lvInfo[a].y-rvInfo[b].y)*(lvInfo[a].y-rvInfo[b].y));
         return rateSizeChange*dsz+rateDisplacement*dis;
     }
-    vector<pair<int,int>> ClusterMatcher::solve() {
+    int ClusterMatcher::solve(vector<pair<int,int>>& links) {
         // construct
         int lvn = ln*(maxOverlap+1);
         int rvn = rn*(maxOverlap+1);
@@ -63,17 +63,18 @@ namespace Matcher {
         // hungarian
         int mincost = hgm.maximumMatching();
         // return pair of relations
-        vector<pair<int,int>> ret;
+        //vector<pair<int,int>> ret;
+        links.clear();
         for(int j=0; j<rn; j++) {
             for(int yi=0; yi<maxOverlap+1; yi++) {
                 int y = j*(maxOverlap+1)+yi;
                 int x = hgm.getMatchY(y);
                 if( x==Hungarian::nil || x>=lvn ) continue;
                 int i = x/(maxOverlap+1);
-                ret.push_back(make_pair(i,j));
+                links.push_back(make_pair(i,j));
             }
         }
-        return ret;
+        return mincost;
     }
 
     vector<ClusterInfo> obj2cinfo(const vector<SmartVideo::ObjectProfile>& objs) {
