@@ -41,6 +41,7 @@ namespace mp{
     {
 		this->clipEntry = &clipEntry;
         clipMaskFileNames = ReadLines(Config.GetForegroundFrameFile(clipEntry));
+		cout << Config.GetForegroundFrameFile(clipEntry) << endl;
 
 		frameNumber = clipEntry.GetFrameCount();
 		cout << "frameNumber: " << frameNumber << endl;
@@ -58,6 +59,7 @@ namespace mp{
 		initSequence();
 
 		namedWindow("Display", CV_WINDOW_AUTOSIZE);
+		namedWindow("Foreground", CV_WINDOW_AUTOSIZE);
 		namedWindow("Weight", CV_WINDOW_AUTOSIZE);
 		createTrackbar("Frame", "Weight", 0, frameNumber-1, changeBar, (void*)this);
 		setTrackbarPos("Frame", "Weight", nowFrameNumber);
@@ -240,7 +242,7 @@ namespace mp{
         Mat frame;
         if (clipEntry->Type == ClipType::Video)
         {
-			clipEntry->Video.set(CV_CAP_PROP_POS_FRAMES, iFrame);
+			//clipEntry->Video.set(CV_CAP_PROP_POS_FRAMES, iFrame);
             // read frame from video
             if (!clipEntry->Video.read(frame) || frame.total() == 0)
             {
@@ -271,20 +273,29 @@ namespace mp{
 
 
   //      // read mask
-  //      auto foregroundFolder = Config.GetForegroundFolder(*clipEntry);
-  //      auto foregroundPath = foregroundFolder + "/" + clipMaskFileNames[iFrame];
-		//Mat mask = imread(foregroundPath, CV_LOAD_IMAGE_COLOR);
+		
+        auto foregroundFolder = Config.GetForegroundFolder(*clipEntry);
+        //auto foregroundPath = foregroundFolder + "/" + clipMaskFileNames[iFrame];
+		char tmp[10];
+		sprintf(tmp,"%d.bmp",iFrame);
+		string tmps(tmp);
+		auto foregroundPath = foregroundFolder + "/" + tmps;
+		Mat mask = imread(foregroundPath, CV_LOAD_IMAGE_COLOR);
 
-  //      // substitute mask in frame
-		//for(int i=0; i<frame.rows; i++){
-		//	for(int j=0; j<frame.cols; j++){
-		//		if(mask.at<Vec3b>(i,j)[0]!=0 || mask.at<Vec3b>(i,j)[1]!=0 || mask.at<Vec3b>(i,j)[2]!=0){
-		//			frame.at<Vec3b>(i,j)[0] = mask.at<Vec3b>(i,j)[0]!=0;
-		//			frame.at<Vec3b>(i,j)[1] = mask.at<Vec3b>(i,j)[0]!=0;
-		//			frame.at<Vec3b>(i,j)[2] = mask.at<Vec3b>(i,j)[0]!=0;
-		//		}
-		//	}
-		//}
+		imshow("Foreground",mask);
+
+        // substitute mask in frame
+		/*
+		for(int i=0; i<frame.rows; i++){
+			for(int j=0; j<frame.cols; j++){
+				if(mask.at<Vec3b>(i,j)[0]!=0 || mask.at<Vec3b>(i,j)[1]!=0 || mask.at<Vec3b>(i,j)[2]!=0){
+					frame.at<Vec3b>(i,j)[0] = mask.at<Vec3b>(i,j)[0];
+					frame.at<Vec3b>(i,j)[1] = mask.at<Vec3b>(i,j)[0];
+					frame.at<Vec3b>(i,j)[2] = mask.at<Vec3b>(i,j)[0];
+				}
+			}
+		}
+		*/
 
 		return frame;
 	}
@@ -306,6 +317,7 @@ namespace mp{
 	void Player::endPlayer(){
 		destroyWindow("Display");
 		destroyWindow("Weight");
+		destroyWindow("Foreground");
 		s.clear();
 		w.clear();
 	}
