@@ -27,6 +27,7 @@ namespace SmartVideo
         ClipinfoDir = JSonGetProperty(cfgRoot, "clipDir")->GetStringValue();
         ClipListFile = JSonGetProperty(cfgRoot, "clipFile")->GetStringValue();
         ForegroundDir = JSonGetProperty(cfgRoot, "fgDir")->GetStringValue();
+        MaskDir = JSonGetProperty(cfgRoot, "maskDir")->GetStringValue();
         DisplayFrames = JSonGetProperty(cfgRoot, "displayResults")->int_value != 0;
         LearningRate = JSonGetProperty(cfgRoot, "learningRate")->float_value;
         CachedImageType = JSonGetProperty(cfgRoot, "cachedImageType")->GetStringValue();
@@ -343,7 +344,7 @@ namespace SmartVideo
             Mat dilateKernel = getStructuringElement(MORPH_ELLIPSE,
                 Size(2*DilateSize+1,2*DilateSize+1),
                 Point(DilateSize,DilateSize));
-            dilate(fgmask, fgmask, erosionKernel);
+            dilate(fgmask, fgmask, dilateKernel);
 
             // hierarchical clustering
             // FIXME: change to agglomerative clustering
@@ -466,25 +467,20 @@ namespace SmartVideo
         for(size_t i=0; i<frameWeights.size(); i++) {
             newWeights[i] = sqrt(frameWeights[i]);
         }
-        //cerr << Config.Fps << " " << Config.TotalPlaybackTime << " " << Config.MaxSpeedUp << endl;
         double mi=newWeights[0], ma=newWeights[0];
         for(size_t i=0; i<newWeights.size(); i++) {
             mi = min(mi,newWeights[i]);
             ma = max(ma,newWeights[i]);
         }
-        //cerr << Config.Fps << " " << Config.TotalPlaybackTime << " " << Config.MaxSpeedUp << endl;
         if(ma>mi+1e-3) {
             for(size_t i=0; i<newWeights.size(); i++) {
                 newWeights[i] = 1+(newWeights[i]-mi)*(Config.MaxSpeedUp-1)/(ma-mi);
             }
         }
-        //cerr << Config.Fps << " " << Config.TotalPlaybackTime << " " << Config.MaxSpeedUp << endl;
         double wsum = 0.0;
         for(size_t i=0; i<newWeights.size(); i++) {
             wsum += newWeights[i];
-            //cerr << "newWt2[i]: " << newWeights[i] << endl;
         }
-        //cerr << Config.Fps << " " << Config.TotalPlaybackTime << " " << Config.MaxSpeedUp << " " << wsum << endl;
         for(size_t i=0; i<newWeights.size(); i++) {
             newWeights[i] = newWeights[i]*Config.Fps*Config.TotalPlaybackTime/wsum;
             //cerr << "newWt[i]: " << newWeights[i] << endl;
@@ -544,6 +540,28 @@ namespace SmartVideo
         catch (runtime_error& ex) 
         {
             cerr << "Exception dumping foreground image in ." << Config.CachedImageType << " format: " << ex.what() << endl;
+            cerr << "Press ENTER to exit." << endl; cin.get();
+            exit(EXIT_FAILURE);
+        }
+
+        // Dump the object frame
+        outfile = Config.GetMaskFolder(*clipEntry) + "/" + info.FrameName + "." + Config.CachedImageType;  // save as CachedImageType
+        try 
+        {
+            MkDir(Config.GetMaskFolderBase(*clipEntry));        // make sure that folder exists
+            MkDir(Config.GetMaskFolder(*clipEntry));        // make sure that folder exists
+            Mat outmat;
+            info.FrameObjectDetection.convertTo(outmat,CV_8U,255.0);
+            bool saved = imwrite(outfile, outmat);
+            if (!saved) 
+            {
+                cerr << "Unable to save " << outfile << endl;
+            }
+        } 
+
+        catch (runtime_error& ex) 
+        {
+            cerr << "Exception dumping object tracking mask in ." << Config.CachedImageType << " format: " << ex.what() << endl;
             cerr << "Press ENTER to exit." << endl; cin.get();
             exit(EXIT_FAILURE);
         }
