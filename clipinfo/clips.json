@@ -7,8 +7,8 @@
 			"frameFile" : "pedestrians.txt",
 			"weightFile" : "pedestrians-weights",
 			"sequenceFile" : "pedestrian-sequence"
-	}
-	,"cafe-1" : {
+	},
+	"cafe-1" : {
 			"type" : "vid",
 			"startFrame" : 0,
 			"baseDir" : "skywatch",

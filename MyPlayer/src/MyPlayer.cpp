@@ -16,8 +16,9 @@ using namespace SmartVideo;
 void changeBar(int value, void* ptr){
 	mp::Player *p = (mp::Player*)ptr;
 	int pos = getTrackbarPos("Frame","Weight");
+	int diff = pos - p->nowFrameNumber;
 	p->setNowFrameNumber(pos);
-	p->showFrame(pos);
+	p->showFrame(pos,diff);
 }
 
 void changeSpeed(int value, void* ptr){
@@ -65,7 +66,7 @@ namespace mp{
 		createTrackbar("Speed", "Weight", 0, 6, changeSpeed, (void*)this);
 		setTrackbarPos("Speed", "Weight", 3);
 
-		showFrame(s[0]);
+		showFrame(s[0],1);
 
 		loop();
 		
@@ -176,7 +177,7 @@ namespace mp{
 		return;
 	}
 
-	void Player::showFrame(int index){
+	void Player::showFrame(int index, int diff){
 		nowFrame.release();
 		nowFrameNumber = index;
 
@@ -186,7 +187,7 @@ namespace mp{
 		cout << framePath << endl;
 		nowFrame = imread(framePath, CV_LOAD_IMAGE_COLOR);
 		*/
-		nowFrame = imgProcessing(index);
+		nowFrame = imgProcessing(index,diff);
 
 		imshow("Display", nowFrame);
 		
@@ -217,8 +218,8 @@ namespace mp{
 	void Player::nextSequence(){
 		if(nowSequenceNumber<sequenceNumber-1){
 			nowSequenceNumber++;
-			nowFrameNumber = s[nowSequenceNumber];
-			setTrackbarPos("Frame", "Weight", nowFrameNumber);
+			//nowFrameNumber = s[nowSequenceNumber];
+			setTrackbarPos("Frame", "Weight", s[nowSequenceNumber]);
 		}
 		else{
 			cout << "the last frame" << endl;
@@ -227,20 +228,21 @@ namespace mp{
 
 	void Player::nextFrame(){
 		if(nowFrameNumber<frameNumber-1){
-			nowFrameNumber++;
-			setTrackbarPos("Frame", "Weight", nowFrameNumber);
+			//nowFrameNumber++;
+			setTrackbarPos("Frame", "Weight", nowFrameNumber+1);
 		}
 		else{
 			cout << "the last frame" << endl;
 		}
 	}
 
-	cv::Mat Player::imgProcessing(int iFrame){
+	cv::Mat Player::imgProcessing(int iFrame, int diff){
         // read actual frame
         Mat frame;
         if (clipEntry->Type == ClipType::Video)
         {
-			//clipEntry->Video.set(CV_CAP_PROP_POS_FRAMES, iFrame);
+			//clipEntry->Video.set(CV_CAP_PROP_POS_MSEC, (double)iFrame*1000/15);
+			//clipEntry->Video.set(CV_CAP_PROP_POS_FRAMES, (double)iFrame);
             // read frame from video
             if (!clipEntry->Video.read(frame) || frame.total() == 0)
             {
@@ -248,6 +250,15 @@ namespace mp{
                 cerr << "Press ENTER to exit." << endl; cin.get();
                 exit(EXIT_FAILURE);
             }
+			while(diff>1){
+				if (!clipEntry->Video.read(frame) || frame.total() == 0)
+				{
+	                cerr << "ERROR: Unable to read next frame (#" << iFrame << ") from video." << endl;
+					cerr << "Press ENTER to exit." << endl; cin.get();
+					exit(EXIT_FAILURE);
+				}
+				diff--;
+			}
         }
         else
         {
@@ -278,12 +289,17 @@ namespace mp{
 		sprintf(tmp,"%d.bmp",iFrame);
 		string tmps(tmp);
 		auto foregroundPath = foregroundFolder + "/" + tmps;
-		Mat mask = imread(foregroundPath, CV_LOAD_IMAGE_COLOR);
+		Mat fg = imread(foregroundPath, CV_LOAD_IMAGE_COLOR);
+		imshow("Foreground",fg);
 
-		imshow("Foreground",mask);
+		auto maskFolder = Config.GetMaskFolder(*clipEntry);
+		sprintf(tmp,"%d.bmp",iFrame);
+		tmps.assign(tmp);
+		auto maskPath = maskFolder + "/" + tmps;
+		Mat mask = imread(maskPath, CV_LOAD_IMAGE_COLOR);
 
         // substitute mask in frame
-		/*
+		
 		for(int i=0; i<frame.rows; i++){
 			for(int j=0; j<frame.cols; j++){
 				if(mask.at<Vec3b>(i,j)[0]!=0 || mask.at<Vec3b>(i,j)[1]!=0 || mask.at<Vec3b>(i,j)[2]!=0){
@@ -293,7 +309,7 @@ namespace mp{
 				}
 			}
 		}
-		*/
+		
 
 		return frame;
 	}

@@ -48,12 +48,12 @@ namespace mp{
 		void initName(SmartVideo::ClipEntry& clipEntry);
 		void initWeight();
 		void initSequence();
-		void showFrame(int index);
+		void showFrame(int index,int diff);
 		void startPlaySequence();
 		void startPlayFrame();
 		void nextSequence();
 		void nextFrame();
-		cv::Mat imgProcessing(int index);
+		cv::Mat imgProcessing(int index, int diff);
 		void loop();
 		void endPlayer();
 	};
