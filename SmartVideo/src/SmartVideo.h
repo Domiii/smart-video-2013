@@ -82,6 +82,11 @@ namespace SmartVideo
         std::string ClipinfoDir;
         std::string ClipListFile;
 
+        // Playback index derivation
+        float MaxSpeedUp;
+        float TotalPlaybackTime;
+        float Fps;
+
         /// Foreground metadata
         std::string ForegroundDir, ForegroundFrameFile;
 
@@ -106,6 +111,10 @@ namespace SmartVideo
             return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.WeightFile;
         }
 
+        std::string GetPlaybackPath(const ClipEntry& clipEntry) const {
+            return CfgFolder + "/" + ClipinfoDir + "/" + clipEntry.Name + "-sequence";
+        }
+
         /// Get the path to the file containing all frame filenames.
         std::string GetFrameFilePath(const ClipEntry& clipEntry) const
         {
@@ -128,6 +137,12 @@ namespace SmartVideo
         std::string GetForegroundFolder(const ClipEntry& clipEntry) const
         {
             return CfgFolder + "/" + DataFolder + "/" + ForegroundDir + "/" + clipEntry.Name;
+        }
+
+        /// Get the folder base of foreground folder
+        std::string GetForegroundFolderBase(const ClipEntry& clipEntry) const
+        {
+            return CfgFolder + "/" + DataFolder + "/" + ForegroundDir;
         }
 
         /// Get the folder containing the cahced foreground datas
@@ -181,7 +196,8 @@ namespace SmartVideo
         /// Index of next frame to be processed
         Util::JobIndex iNextProcessFrame;
         std::unique_ptr<cv::BackgroundSubtractor> pMOG;     // MOG Background subtractor
-        std::vector<float> frameWeights;                    // weight of every frame
+        std::vector<double> frameWeights;                    // weight of every frame
+        std::vector<int> playbackSequence;                  // list of frames to play
 
         /// WorkerPool for multi-threaded I/O
         Util::WorkerPool ioPool;
@@ -232,7 +248,7 @@ namespace SmartVideo
         void BackgroundSubtraction(FrameInfo& info);
         void InitObjectTracking();
         void ObjectTracking(FrameInfo& info);
-        void SmoothWeights();
+        void FinalizeWeights();
 
         // Helper Proccesses
         bool ClusterWithK(const cv::Mat& fgmask, int maxCluster, cv::Mat3f& clmask);
@@ -247,6 +263,7 @@ namespace SmartVideo
         void SetWeight(int iFrame, float weight)
         {
             frameWeights[iFrame] = weight;
+            // cerr << "wt=" << weight << endl;
         }
 
         /// Process a stream that is represented by a sequence of images.

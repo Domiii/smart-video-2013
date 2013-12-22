@@ -1,6 +1,8 @@
 #include "SmartVideo.h"
 
+#include <algorithm>
 #include <iomanip>
+#include <cmath>
 
 #include "FileUtil.h"
 #include <functional>
@@ -29,6 +31,9 @@ namespace SmartVideo
         LearningRate = JSonGetProperty(cfgRoot, "learningRate")->float_value;
         CachedImageType = JSonGetProperty(cfgRoot, "cachedImageType")->GetStringValue();
         UseCachedForForeground = JSonGetProperty(cfgRoot, "useCachedForForeground")->int_value > 0;
+        MaxSpeedUp = JSonGetProperty(cfgRoot, "maxSpeedUp")->float_value;
+        TotalPlaybackTime = JSonGetProperty(cfgRoot, "totalPlaybackTime")->float_value;
+        Fps = JSonGetProperty(cfgRoot, "fps")->float_value;
 
         std::string clipListPath(GetClipListPath());
         json_value * clipRoot = JSonReadFile(clipListPath);
@@ -138,6 +143,7 @@ namespace SmartVideo
         {
             // write weight file
             WriteLines(Config.GetWeightsPath(*clipEntry), frameWeights);
+            WriteLines(Config.GetPlaybackPath(*clipEntry), playbackSequence);
             cout << "Done.";
         }
         else
@@ -163,7 +169,7 @@ namespace SmartVideo
         }
 
         // smooth weight vector
-        SmoothWeights();
+        FinalizeWeights();
 
         // finalize the process
         FinishProcessing();
@@ -426,19 +432,23 @@ namespace SmartVideo
 
             prevObject = curObject;
 
-            // cerr << "ncluster = curObject.size() = " << curObject.size() << endl;
         }
     }
 
-    void SmartVideoProcessor::SmoothWeights()
+    void SmartVideoProcessor::FinalizeWeights()
     {
-        const int halfWindow = 5;
+        // smooth weight
+        const int halfWindow = 4;
         int cc = 0;
-        float runningSum = 0.0;
-        vector<float> newWeights;
+        double runningSum = 0.0;
+        vector<double> newWeights;
         newWeights.reserve(frameWeights.size());
+        for(size_t i=0; i<frameWeights.size()&&i<halfWindow; i++) {
+            runningSum += frameWeights[i];
+            cc++;
+        }
         for(size_t i=0; i<frameWeights.size(); i++) {
-            if(i-halfWindow>=0) {
+            if(i>=halfWindow) {
                 cc--;
                 runningSum -= frameWeights[i-halfWindow];
             }
@@ -446,10 +456,49 @@ namespace SmartVideo
                 cc++;
                 runningSum += frameWeights[i+halfWindow];
             }
-            double w = runningSum / cc;
+            double w = max(runningSum / cc, 0.0);
             newWeights.push_back(w);
         }
         frameWeights = newWeights;
+
+        // reweight
+        for(size_t i=0; i<frameWeights.size(); i++) {
+            newWeights[i] = sqrt(frameWeights[i]);
+        }
+        //cerr << Config.Fps << " " << Config.TotalPlaybackTime << " " << Config.MaxSpeedUp << endl;
+        double mi=newWeights[0], ma=newWeights[0];
+        for(size_t i=0; i<newWeights.size(); i++) {
+            mi = min(mi,newWeights[i]);
+            ma = max(ma,newWeights[i]);
+        }
+        //cerr << Config.Fps << " " << Config.TotalPlaybackTime << " " << Config.MaxSpeedUp << endl;
+        if(ma>mi+1e-3) {
+            for(size_t i=0; i<newWeights.size(); i++) {
+                newWeights[i] = 1+(newWeights[i]-mi)*(Config.MaxSpeedUp-1)/(ma-mi);
+            }
+        }
+        //cerr << Config.Fps << " " << Config.TotalPlaybackTime << " " << Config.MaxSpeedUp << endl;
+        double wsum = 0.0;
+        for(size_t i=0; i<newWeights.size(); i++) {
+            wsum += newWeights[i];
+            //cerr << "newWt2[i]: " << newWeights[i] << endl;
+        }
+        //cerr << Config.Fps << " " << Config.TotalPlaybackTime << " " << Config.MaxSpeedUp << " " << wsum << endl;
+        for(size_t i=0; i<newWeights.size(); i++) {
+            newWeights[i] = newWeights[i]*Config.Fps*Config.TotalPlaybackTime/wsum;
+            //cerr << "newWt[i]: " << newWeights[i] << endl;
+        }
+
+        // derive playback sequence;
+        double accum = 0.0;
+        playbackSequence.clear();
+        for(size_t i=0; i<newWeights.size(); i++) {
+            accum += newWeights[i];
+            while(accum>=1.0) {
+                accum -= 1.0;
+                playbackSequence.push_back(i);
+            }
+        }
     }
 
     void SmartVideoProcessor::UpdateDisplay(FrameInfo& info)
@@ -482,6 +531,7 @@ namespace SmartVideo
         std::string outfile = Config.GetForegroundFolder(*clipEntry) + "/" + info.FrameName + "." + Config.CachedImageType;  // save as CachedImageType
         try 
         {
+            MkDir(Config.GetForegroundFolderBase(*clipEntry));        // make sure that folder exists
             MkDir(Config.GetForegroundFolder(*clipEntry));        // make sure that folder exists
             bool saved = imwrite(outfile, info.FrameForegroundMask);
             if (!saved) 
@@ -489,11 +539,13 @@ namespace SmartVideo
                 cerr << "Unable to save " << outfile << endl;
             }
         } 
+
         catch (runtime_error& ex) 
         {
             cerr << "Exception dumping foreground image in ." << Config.CachedImageType << " format: " << ex.what() << endl;
             exit(0);
         }
+
     }
 
 
