@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include "FileUtil.h"
 
 
 using namespace std;
@@ -38,9 +39,11 @@ namespace mp{
 	
 	void Player::initPlayer(ClipEntry& clipEntry)
     {
+		this->clipEntry = &clipEntry;
         clipMaskFileNames = ReadLines(Config.GetForegroundFrameFile(clipEntry));
 
 		frameNumber = clipEntry.GetFrameCount();
+		cout << "frameNumber: " << frameNumber << endl;
 		startFrameNumber = 0;
 		nowFrameNumber = 0;
 		waitKeyNumber = 32;
@@ -50,6 +53,7 @@ namespace mp{
 		weightW = 1000;
 		weightH = 100;
 
+		sequencePath = "../clipinfo/play_sequence";
 		initWeight();
 		initSequence();
 
@@ -72,7 +76,7 @@ namespace mp{
         if (!fp)
         {
             cerr << "ERROR: Could not open file " << sequencePath << endl ;
-            cout << "Press ENTER to exit." << endl; cin.get();
+            cerr << "Press ENTER to exit." << endl; cin.get();
             exit(EXIT_FAILURE);
         }
 
@@ -91,8 +95,8 @@ namespace mp{
 		fp = fopen(weightPath.c_str(),"r");
         if (!fp)
         {
-            cerr << "ERROR: Could not open file " << sequencePath << endl ;
-            cout << "Press ENTER to exit." << endl; cin.get();
+            cerr << "ERROR: Could not open file " << weightPath << endl ;
+            cerr << "Press ENTER to exit." << endl; cin.get();
             exit(EXIT_FAILURE);
         }
 
@@ -236,11 +240,12 @@ namespace mp{
         Mat frame;
         if (clipEntry->Type == ClipType::Video)
         {
+			clipEntry->Video.set(CV_CAP_PROP_POS_FRAMES, iFrame);
             // read frame from video
             if (!clipEntry->Video.read(frame) || frame.total() == 0)
             {
                 cerr << "ERROR: Unable to read next frame (#" << iFrame << ") from video." << endl;
-                cout << "Press ENTER to exit." << endl; cin.get();
+                cerr << "Press ENTER to exit." << endl; cin.get();
                 exit(EXIT_FAILURE);
             }
         }
@@ -254,10 +259,12 @@ namespace mp{
             string fpath = folder + "/" + fname;
 
             frame = imread(fpath);
+			cout << fpath << endl;
             if(!frame.data)
             {
                 // error in opening an image file
                 cerr << "Unable to open image frame: " << fpath << endl;
+                cerr << "Press ENTER to exit." << endl; cin.get();
                 exit(EXIT_FAILURE);
             } 
         }

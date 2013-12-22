@@ -15,7 +15,7 @@
 
 namespace Util
 {
-    void MkDir(std::string fname, int mode = 0777) 
+    inline void MkDir(std::string fname, int mode = 0777) 
     {
         mkdir(fname.c_str(), mode);
     }

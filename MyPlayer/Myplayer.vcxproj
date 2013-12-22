@@ -19,12 +19,23 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\SmartVideo\src\agglomerative.cpp" />
+    <ClCompile Include="..\SmartVideo\src\hungarian.cpp" />
+    <ClCompile Include="..\SmartVideo\src\main.cpp" />
+    <ClCompile Include="..\SmartVideo\src\matcher.cpp" />
+    <ClCompile Include="..\SmartVideo\src\objectProfile.cpp" />
     <ClCompile Include="..\SmartVideo\src\SmartVideo.cpp" />
+    <ClCompile Include="..\SmartVideo\src\workers.cpp" />
     <ClCompile Include="dep\vjson\json.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\MyPlayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\SmartVideo\src\ConsoleUtil.h" />
+    <ClInclude Include="..\SmartVideo\src\FileUtil.h" />
+    <ClInclude Include="..\SmartVideo\src\JSonUtil.h" />
+    <ClInclude Include="..\SmartVideo\src\ThreadUtil.h" />
+    <ClInclude Include="..\SmartVideo\src\util.h" />
     <ClInclude Include="src\MyPlayer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
