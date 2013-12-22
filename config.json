@@ -7,7 +7,7 @@
    "displayResults" : false,
 
    "fgDir" : "cached/foreground",
-   "maskDir" : "clipinfo/cached/foreground",
+   "maskDir" : "cached/mask",
    "cachedImageType" : "bmp",
    "useCachedForForeground" : false,
 
