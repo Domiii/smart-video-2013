@@ -14,7 +14,7 @@
 			"baseDir" : "skywatch",
 			"frameFile" : "a.mp4",
 			"weightFile" : "cafe1-weights",
-			"sequenceFile" : "cafe1-sequence"
+			"sequenceFile" : "cafe-1-sequence"
 	},
 	"cafe-2" : {
 			"type" : "vid",
@@ -22,7 +22,7 @@
 			"baseDir" : "skywatch",
 			"frameFile" : "b.mp4",
 			"weightFile" : "cafe2-weights",
-			"sequenceFile" : "cafe2-sequence"
+			"sequenceFile" : "cafe-2-sequence"
 	},
 	"cafe-3" : {
 			"type" : "vid",
@@ -30,7 +30,7 @@
 			"baseDir" : "skywatch",
 			"frameFile" : "c.mp4",
 			"weightFile" : "cafe3-weights",
-			"sequenceFile" : "cafe3-sequence"
+			"sequenceFile" : "cafe-3-sequence"
 	},
 	"road" : {
 			"type" : "img",
@@ -39,6 +39,6 @@
 			"baseDir" : "SABS/Test/Basic/",
 			"frameFile" : "basic.txt",
 			"weightFile" : "basic-weights",
-			"sequenceFile" : "basic-sequence"
+			"sequenceFile" : "road-sequence"
 	}
 }
