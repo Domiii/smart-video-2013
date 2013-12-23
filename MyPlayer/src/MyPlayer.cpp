@@ -116,10 +116,16 @@ namespace mp{
 		CvSize ImageSize = cvSize(weightW,weightH);
 		imgWeight = cvCreateImage(ImageSize,IPL_DEPTH_8U,3);
 
+		double max = 0;
+		for(int i=0; i<(int)w.size(); i++){
+			if(max<w[i])
+				max = w[i];
+		}
+
 		if(frameNumber<1000){
 			for(int i=0; i<frameNumber; i++){
 				FromPoint = cvPoint(i,weightH);
-				ToPoint = cvPoint(i,weightH-(int)(weightH*w[i]/10000));
+				ToPoint = cvPoint(i,weightH-(int)(weightH*w[i]/max));
 				cvLine(imgWeight,FromPoint,ToPoint,Color,Thickness,4,Shift);
 			}
 		}
@@ -128,7 +134,7 @@ namespace mp{
 				double ratio = (double)i/1000*(double)frameNumber;
 				int index = (int)ratio;
 				FromPoint = cvPoint(i,weightH);
-				ToPoint = cvPoint(i,weightH-(int)(weightH*w[index]/10000));
+				ToPoint = cvPoint(i,weightH-(int)(weightH*w[index]/max));
 				cvLine(imgWeight,FromPoint,ToPoint,Color,Thickness,4,Shift);
 			}
 		}
@@ -281,7 +287,7 @@ namespace mp{
         }
 
 
-  //      // read mask
+        // read mask
 		
         auto foregroundFolder = Config.GetForegroundFolder(*clipEntry);
         //auto foregroundPath = foregroundFolder + "/" + clipMaskFileNames[iFrame];
