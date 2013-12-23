@@ -11,8 +11,8 @@
    "cachedImageType" : "bmp",
    "useCachedForForeground" : false,
 
-   "maxSpeedUp" : 20.0,
-   "totalPlaybackTime" : 60.0,
+   "maxSpeedUp" : 80.0,
+   "totalPlaybackTime" : 30.0,
    "fps" : 30.1667
 
 }

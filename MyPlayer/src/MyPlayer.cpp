@@ -66,6 +66,16 @@ namespace mp{
 		createTrackbar("Speed", "Weight", 0, 6, changeSpeed, (void*)this);
 		setTrackbarPos("Speed", "Weight", 3);
 
+		
+		if(clipEntry.Type == ClipType::Video){
+			Mat frame;
+			int num = 11;
+
+			while(num--)
+				clipEntry.Video.read(frame);
+		}
+		
+
 		showFrame(s[0],1);
 
 		loop();
@@ -195,7 +205,6 @@ namespace mp{
 		*/
 		nowFrame = imgProcessing(index,diff);
 
-		imshow("Display", nowFrame);
 		
 		CvPoint FromPoint,ToPoint;
 		CvScalar Color = CV_RGB(255,0,0);
@@ -296,7 +305,7 @@ namespace mp{
 		string tmps(tmp);
 		auto foregroundPath = foregroundFolder + "/" + tmps;
 		Mat fg = imread(foregroundPath, CV_LOAD_IMAGE_COLOR);
-		imshow("Foreground",fg);
+		
 
 		auto maskFolder = Config.GetMaskFolder(*clipEntry);
 		sprintf(tmp,"%d.bmp",iFrame);
@@ -315,8 +324,9 @@ namespace mp{
 				}
 			}
 		}
-		
 
+		imshow("Foreground",fg);
+		imshow("Display", frame);
 		return frame;
 	}
 
