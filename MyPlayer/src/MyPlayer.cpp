@@ -276,7 +276,7 @@ namespace mp{
             string fpath = folder + "/" + fname;
 
             frame = imread(fpath);
-			cout << fpath << endl;
+			//cout << fpath << endl;
             if(!frame.data)
             {
                 // error in opening an image file
